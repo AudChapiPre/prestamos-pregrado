@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estadísticas de Préstamos</title>
+  <style>
+    table {
+  width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+    }
+     .container {
+            max-width: 100%;
+            margin: auto;
+            background: white;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #007BFF;
+      color: white;
+    }
+    button {
+      margin: 5px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    nav {
+      background-color: #007BFF;
+      padding: 10px;
+      color: white;
+    }
+    nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: space-around;
+    }
+    nav ul li a {
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      display: block;
+    }
+    nav ul li a:hover {
+      background-color: #0056b3;
+    }
+    @media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  nav ul {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  nav ul li {
+    width: 100%;
+    text-align: center;
+  }
+
+  table, th, td {
+    font-size: 12px;
+  }
+
+  .card {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .card-body button {
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+}
+  </style>
+</head>
+<body>
+   <script>
+  const claveCorrecta = "Chapi2025";
+  const claveGuardada = sessionStorage.getItem("clavePrestamos");
+
+  if (claveGuardada !== claveCorrecta) {
+    const intento = prompt("🔐 Ingresa la contraseña de acceso:");
+    if (intento === claveCorrecta) {
+      sessionStorage.setItem("clavePrestamos", claveCorrecta);
+    } else {
+      alert("Contraseña incorrecta.");
+      window.location.href = "https://google.com";
+    }
+  }
+</script>
+  <nav>
+    <ul>
+      <li><a href="index.html">Gestión de préstamos</a></li>
+      <li><a href="activos.html">Préstamos activos</a></li>
+      <li><a href="historial.html">Historial</a></li>
+      <li><a href="estadisticas.html">Estadísticas</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <h2>Estadísticas de Préstamos</h2>
+    <button onclick="exportarEstadisticas()">Exportar a CSV</button>
+    
+    <table id="tablaEstadisticas">
+      <thead>
+        <tr>
+          <th>Tipo de Usuario</th>
+          <th>Servicios (Mañana)</th>
+          <th>Servicios (Tarde)</th>
+          <th>Horas Totales (HDMI)</th>
+          <th>Horas Totales (Portátiles)</th>
+          <th>Horas Totales (Anchors)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+  
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7llIg5wLu8P_5WBbjg4GW3orZZ1w8_vE",
+      authDomain: "prestamos-1efef.firebaseapp.com",
+      projectId: "prestamos-1efef",
+      storageBucket: "prestamos-1efef.firebasestorage.app",
+      messagingSenderId: "977813237082",
+      appId: "1:977813237082:web:576287c13c305db3811763"
+    };
+  
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+  
+    function exportarEstadisticas() {
+  const tabla = document.querySelector("#tablaEstadisticas tbody");
+  if (!tabla) {
+    alert("No hay estadísticas para exportar.");
+    return;
+  }
+
+  let csv = "Tipo de Usuario,Servicios (Mañana),Servicios (Tarde),Horas Totales (HDMI),Horas Totales (Portátiles),Horas Totales (Anchors)\n";
+
+  tabla.querySelectorAll("tr").forEach(fila => {
+    let filaData = Array.from(fila.querySelectorAll("td")).map(td => `"${td.innerText}"`);
+    csv += filaData.join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "Estadisticas_Prestamos.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Exponer al ámbito global
+window.exportarEstadisticas = exportarEstadisticas;
+
+    async function cargarEstadisticasDesdeFirestore() {
+      const estadisticas = {
+        docentes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
+        estudiantes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
+        administrativos: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 }
+      };
+  
+      const tipoMap = {
+        docente: "docentes",
+        estudiante: "estudiantes",
+        administrativo: "administrativos"
+      };
+  
+      const snapshot = await getDocs(collection(db, "historial"));
+      snapshot.forEach(doc => {
+        const p = doc.data();
+        const tipoOriginal = (p.tipoUsuario || "").toLowerCase().trim();
+        const tipo = tipoMap[tipoOriginal];
+  
+        if (!tipo || !estadisticas[tipo]) {
+          console.warn("❌ Tipo no reconocido:", tipoOriginal);
+          return;
+        }
+  
+        const grupo = estadisticas[tipo];
+  
+        const hora = parseInt(p.horaEntrega.split(":")[0]);
+        if (hora < 12) grupo.mañana++;
+        else grupo.tarde++;
+  
+        const horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+  
+        if ((p.equipos || []).includes("HDMI")) grupo.horasHDMI += horasNetas;
+        if ((p.equipos || []).some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
+        if ((p.equipos || []).includes("ANCHOR")) grupo.horasAnchors += horasNetas;
+      });
+  
+      // Renderizar tabla
+      const tabla = document.querySelector("#tablaEstadisticas tbody");
+      tabla.innerHTML = `
+        <tr>
+          <td>Docentes</td>
+          <td>${estadisticas.docentes.mañana}</td>
+          <td>${estadisticas.docentes.tarde}</td>
+          <td>${estadisticas.docentes.horasHDMI.toFixed(2)}</td>
+          <td>${estadisticas.docentes.horasPortatiles.toFixed(2)}</td>
+          <td>${estadisticas.docentes.horasAnchors.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Estudiantes</td>
+          <td>${estadisticas.estudiantes.mañana}</td>
+          <td>${estadisticas.estudiantes.tarde}</td>
+          <td>${estadisticas.estudiantes.horasHDMI.toFixed(2)}</td>
+          <td>${estadisticas.estudiantes.horasPortatiles.toFixed(2)}</td>
+          <td>${estadisticas.estudiantes.horasAnchors.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td>Administrativos</td>
+          <td>${estadisticas.administrativos.mañana}</td>
+          <td>${estadisticas.administrativos.tarde}</td>
+          <td>${estadisticas.administrativos.horasHDMI.toFixed(2)}</td>
+          <td>${estadisticas.administrativos.horasPortatiles.toFixed(2)}</td>
+          <td>${estadisticas.administrativos.horasAnchors.toFixed(2)}</td>
+        </tr>
+      `;
+    }
+  
+    function calcularHorasNetas(horaEntrega, horaDevolucion) {
+      const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
+      const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
+      const diferencia = devolucion - entrega;
+      return Math.max(0, diferencia / (1000 * 60 * 60)); // en horas
+    }
+  
+    // Iniciar al cargar la página
+    window.addEventListener("DOMContentLoaded", cargarEstadisticasDesdeFirestore);
+  </script>
+<script>
+    window.reiniciarEstadisticas = function () {
+      const tabla = document.querySelector("#tablaEstadisticas tbody");
+      tabla.innerHTML = `
+        <tr>
+          <td>Docentes</td>
+          <td>0</td><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td>
+        </tr>
+        <tr>
+          <td>Estudiantes</td>
+          <td>0</td><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td>
+        </tr>
+        <tr>
+          <td>Administrativos</td>
+          <td>0</td><td>0</td><td>0.00</td><td>0.00</td><td>0.00</td>
+        </tr>
+      `;
+      alert("⚠️ Las estadísticas solo se han limpiado visualmente. Los datos en Firestore siguen intactos.");
+    };
+  </script>
+    
+</body>
+</html>
