@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estadísticas de Préstamos</title>
@@ -128,7 +130,7 @@
 
   <div class="container">
     <h2>Estadísticas de Préstamos</h2>
-    <button onclick="exportarEstadisticas()">Exportar a CSV</button>
+    <button onclick="exportarEstadisticas()">Exportar a Excel</button>
     
     <table id="tablaEstadisticas">
       <thead>
@@ -163,6 +165,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
   
+
+
+  //exportar estadisticas 
+
     function exportarEstadisticas() {
   const tabla = document.querySelector("#tablaEstadisticas tbody");
   if (!tabla) {
@@ -170,21 +176,43 @@
     return;
   }
 
-  let csv = "Tipo de Usuario,Servicios (Mañana),Servicios (Tarde),Horas Totales (HDMI),Horas Totales (Portátiles),Horas Totales (Anchors)\n";
+  // Construir encabezados y filas desde la tabla
+  const headers = [
+    "Tipo de Usuario",
+    "Servicios (Mañana)",
+    "Servicios (Tarde)",
+    "Horas Totales (HDMI)",
+    "Horas Totales (Portátiles)",
+    "Horas Totales (Anchors)"
+  ];
+
+  const rows = [headers];
 
   tabla.querySelectorAll("tr").forEach(fila => {
-    let filaData = Array.from(fila.querySelectorAll("td")).map(td => `"${td.innerText}"`);
-    csv += filaData.join(",") + "\n";
+    const filaData = Array.from(fila.querySelectorAll("td")).map(td => td.innerText);
+    rows.push(filaData);
   });
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "Estadisticas_Prestamos.csv";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // Crear hoja desde array
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // (Truco) Formato de columnas
+  ws["!cols"] = [
+    { wch: 18 }, // Tipo de Usuario
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 22 },
+    { wch: 25 },
+    { wch: 22 }
+  ];
+
+  // Crear libro y exportar
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Estadísticas");
+
+  XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
 }
+
 
 // Exponer al ámbito global
 window.exportarEstadisticas = exportarEstadisticas;
@@ -286,6 +314,7 @@ window.exportarEstadisticas = exportarEstadisticas;
       alert("⚠️ Las estadísticas solo se han limpiado visualmente. Los datos en Firestore siguen intactos.");
     };
   </script>
+  <b> © Juan Ladino - 2025 </b>
     
 </body>
 </html>
