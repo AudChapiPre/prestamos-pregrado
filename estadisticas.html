@@ -397,26 +397,32 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
       return;
     }
 
+    function setCell(ws, cell, value) {
+  if (!ws[cell]) ws[cell] = {};   // crea la celda si no existe
+  ws[cell].t = typeof value === "number" ? "n" : "s"; // tipo (número o texto)
+  ws[cell].v = value;
+}
+
     // 5. Escribir en las celdas
-    ws["C4"].v  = window.totalServicios || 0;  // Total servicios (salones)
+    setCell(ws, "C4",  window.totalServicios || 0);
 
-    ws["C8"].v  = totalDocentes;
-    ws["C9"].v  = totalEstudiantes;
-    ws["C10"].v = totalAdmins;
+    setCell(ws, "C8",  totalDocentes);
+    setCell(ws, "C9",  totalEstudiantes);
+    setCell(ws, "C10", totalAdmins);
 
-    ws["C12"].v = totalManana;
-    ws["C13"].v = totalTarde;
+    setCell(ws, "C12", totalManana);
+    setCell(ws, "C13", totalTarde);
 
-    ws["C18"].v = totalEstudiantes; // estudiante otra vez
-    ws["C19"].v = totalDocentes;    // docente otra vez
-    ws["C20"].v = totalAdmins;      // admin otra vez
+    setCell(ws, "C18", totalEstudiantes); // estudiante otra vez
+    setCell(ws, "C19", totalDocentes);    // docente otra vez
+    setCell(ws, "C20", totalAdmins);      // admin otra vez
 
-    ws["C22"].v = horasVideobeam + horasControlVB;
-    ws["C23"].v = horasPortatil;
-    ws["C25"].v = horasOneScreen;
-    ws["C26"].v = horasSmartTV;
-    ws["C27"].v = horasAnchor;
-
+    setCell(ws, "C22", horasVideobeam + horasControlVB);
+    setCell(ws, "C23", horasPortatil);
+    setCell(ws, "C25", horasOneScreen);
+    setCell(ws, "C26", horasSmartTV);
+    setCell(ws, "C27", horasAnchor);
+    
     // 6. Exportar nuevo archivo
     XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
     console.log("📊 Archivo de estadísticas exportado con éxito");
