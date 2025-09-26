@@ -354,6 +354,9 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
   </script>
   <script>
 
+function redondearNumero(num) {
+    return Math.round((num + Number.EPSILON) * 10) / 10; // máximo 1 decimal, siempre número
+}
 
 async function exportarEstadisticasConPlantilla() {
     try {
@@ -381,11 +384,11 @@ async function exportarEstadisticasConPlantilla() {
         const totalServicios = totalDocentes + totalEstudiantes + totalAdmins;
 
         // === Totales de horas por equipo ===
-        const totalHorasVideobeam = Math.round(((docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0)) * 10) / 10;
-        const totalHorasPortatil  = Math.round(((docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0)) * 10) / 10;
-        const totalHorasOnescreen = Math.round(((docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0)) * 10) / 10;
-        const totalHorasTV        = Math.round(((docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0)) * 10) / 10;
-        const totalHorasAnchor    = Math.round(((docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0)) * 10) / 10;
+        const totalHorasVideobeam = redondearNumero((docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0));
+        const totalHorasPortatil  = redondearNumero((docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0));
+        const totalHorasOnescreen = redondearNumero((docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0));
+        const totalHorasTV        = redondearNumero((docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0));
+        const totalHorasAnchor    = redondearNumero((docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0));
 
         // === 1. Cargar plantilla desde tu proyecto ===
         const response = await fetch("Indicadores base.xlsx");
