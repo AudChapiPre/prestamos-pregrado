@@ -370,10 +370,7 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
         const totalManana = docentes.mañana + estudiantes.mañana + admins.mañana;
         const totalTarde  = docentes.tarde  + estudiantes.tarde  + admins.tarde;
 
-const response = await fetch("Indicadores base.xlsx");
-const arrayBuffer = await response.arrayBuffer();
-const wb = XLSX.read(arrayBuffer, { type: "array" });
- 
+
     // 3. Totales de horas por equipo
     let horasVideobeam = 0, horasPortatil = 0, horasOneScreen = 0, horasSmartTV = 0, horasAnchor = 0, horasControlVB = 0;
 
@@ -390,8 +387,8 @@ const wb = XLSX.read(arrayBuffer, { type: "array" });
     });
 
     // 4. Cargar la plantilla
-    const response = await fetch("Indicadores base.xlsx");
-    const arrayBuffer = await response.arrayBuffer();
+    const resp = await fetch("Indicadores base.xlsx");
+    const arrayBuffer = await resp.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: "array" });
 
     const ws = wb.Sheets["Hoja1"];
@@ -448,6 +445,8 @@ function calcularHorasNetas(horaEntrega, horaDevolucion) {
     return 0;
   }
 }
+// Exponer la función al ámbito global
+window.exportarEstadisticasConPlantilla = exportarEstadisticasConPlantilla;
 
 </script>
 
