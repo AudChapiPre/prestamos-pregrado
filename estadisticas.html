@@ -355,108 +355,67 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
   <script>
 
 
-async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
-  try {
-    if (!prestamos || prestamos.length === 0) {
-      alert("No hay datos para exportar.");
-      return;
-    }
- const estadisticas = window.estadisticas;
- // Calcular totales por jornada
-let totalServiciosMañana = 0;
-let totalServiciosTarde = 0;
+async function exportarEstadisticasConPlantilla() {
+    try {
+        if (!window.estadisticas) {
+            alert("No hay estadísticas cargadas todavía.");
+            return;
+        }
 
-console.log("👉 Estadisticas:", estadisticas);
+        const estadisticas = window.estadisticas;
 
-estadisticas.forEach(item => {
-    totalServiciosMañana += item.mañana || 0;
-    totalServiciosTarde  += item.tarde  || 0;
-});
+        // === Totales por usuario ===
+        const docentes    = estadisticas.docentes || {};
+        const estudiantes = estadisticas.estudiantes || {};
+        const admins      = estadisticas.administrativos || {};
 
-// Total de servicios
+        const totalDocentes    = (docentes.mañana || 0) + (docentes.tarde || 0);
+        const totalEstudiantes = (estudiantes.mañana || 0) + (estudiantes.tarde || 0);
+        const totalAdmins      = (admins.mañana || 0) + (admins.tarde || 0);
 
+        // === Totales por jornada ===
+        const totalServiciosMañana = (docentes.mañana || 0) + (estudiantes.mañana || 0) + (admins.mañana || 0);
+        const totalServiciosTarde  = (docentes.tarde || 0) + (estudiantes.tarde || 0) + (admins.tarde || 0);
 
- estadisticas.forEach(item => {
-            // Servicios por jornada
-            totalServiciosMañana += item.mañana || 0;
-            totalServiciosTarde  += item.tarde  || 0;
+        // === Total general ===
+        const totalServicios = totalDocentes + totalEstudiantes + totalAdmins;
 
-            // Servicios por tipo usuario
-            if (item.tipo === "DOCENTE") totalDocentes += (item.total || 0);
-            if (item.tipo === "ESTUDIANTE") totalEstudiantes += (item.total || 0);
-            if (item.tipo === "ADMINISTRATIVO") totalAdmins += (item.total || 0);
+        // === Totales de horas por equipo ===
+        const totalHorasVideobeam = (docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0);
+        const totalHorasPortatil  = (docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0);
+        const totalHorasOnescreen = (docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0);
+        const totalHorasTV        = (docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0);
+        const totalHorasAnchor    = (docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0);
 
-            // Horas por equipo
-            totalHorasVideobeam += item.horasVideobeam || 0;
-            totalHorasPortatil  += item.horasPortatil || 0;
-            totalHorasOnescreen += item.horasOnescreen || 0;
-            totalHorasTV        += item.horasTV || 0;
-            totalHorasAnchor    += item.horasAnchor || 0;
-        });
-
-        let totalServicios = totalServiciosMañana + totalServiciosTarde;
-
-    // 1. Totales por usuario
-        const docentes    = estadisticas["DOCENTE"]       || { mañana: 0, tarde: 0 };
-        const estudiantes = estadisticas["ESTUDIANTE"]    || { mañana: 0, tarde: 0 };
-        const admins      = estadisticas["ADMINISTRATIVO"]|| { mañana: 0, tarde: 0 };
-
-        const totalDocentes    = docentes.mañana + docentes.tarde;
-        const totalEstudiantes = estudiantes.mañana + estudiantes.tarde;
-        const totalAdmins      = admins.mañana + admins.tarde;
-
-        const totalManana = docentes.mañana + estudiantes.mañana + admins.mañana;
-        const totalTarde  = docentes.tarde  + estudiantes.tarde  + admins.tarde;
-
-
-    // 3. Totales de horas por equipo
-    let horasVideobeam = 0, horasPortatil = 0, horasOneScreen = 0, horasSmartTV = 0, horasAnchor = 0, horasControlVB = 0;
-
-    prestamos.forEach(p => {
-      const horas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
-      (p.equipos || []).forEach(eq => {
-        if (eq === "VIDEOBEAM" || eq === "HDMI") horasVideobeam += horas; // soporta registros viejos con HDMI
-        if (eq === "PORTÁTIL LENOVO") horasPortatil += horas;
-        if (eq === "ONESCREEN") horasOneScreen += horas;
-        if (eq === "SMART TV") horasSmartTV += horas;
-        if (eq === "ANCHOR (PARLANTE)") horasAnchor += horas;
-        if (eq === "CONTROL VB") horasControlVB += horas;
-      });
-    });
-
-    // 4. Cargar la plantilla
+        // === 1. Cargar plantilla desde tu proyecto ===
         const response = await fetch("Indicadores base.xlsx");
         const data = await response.arrayBuffer();
-    
+
+        // === 2. Abrir plantilla con XLSX-populate ===
         const workbook = await XlsxPopulate.fromDataAsync(data);
         const sheet = workbook.sheet(0); // Hoja1
-   
 
-    function setCell(ws, cell, value) {
-  if (!ws[cell]) ws[cell] = {};   // crea la celda si no existe
-  ws[cell].t = typeof value === "number" ? "n" : "s"; // tipo (número o texto)
-  ws[cell].v = value;
-}
+        // === 3. Escribir en las celdas ===
+        sheet.cell("C4").value(totalServicios);
 
-     // 👉 Aquí colocamos los datos calculados
-        sheet.cell("C4").value(totalServicios);      // Salones
-        sheet.cell("C8").value(totalDocentes);      // Docentes
-        sheet.cell("C9").value(totalEstudiantes);   // Estudiantes
-        sheet.cell("C10").value(totalAdmins);       // Administrativos
+        sheet.cell("C8").value(totalDocentes);
+        sheet.cell("C9").value(totalEstudiantes);
+        sheet.cell("C10").value(totalAdmins);
+
         sheet.cell("C12").value(totalServiciosMañana);
         sheet.cell("C13").value(totalServiciosTarde);
-        sheet.cell("C18").value(totalEstudiantes);  
-        sheet.cell("C19").value(totalDocentes);     
-        sheet.cell("C20").value(totalAdmins);       
 
-        // Horas por equipo
+        sheet.cell("C18").value(totalEstudiantes);
+        sheet.cell("C19").value(totalDocentes);
+        sheet.cell("C20").value(totalAdmins);
+
         sheet.cell("C22").value(totalHorasVideobeam);
         sheet.cell("C23").value(totalHorasPortatil);
         sheet.cell("C25").value(totalHorasOnescreen);
         sheet.cell("C26").value(totalHorasTV);
         sheet.cell("C27").value(totalHorasAnchor);
 
-        // Descargar archivo ya con estilos y datos
+        // === 4. Descargar archivo con los datos + estilos ===
         const blob = await workbook.outputAsync();
         const url = window.URL.createObjectURL(new Blob([blob]));
         const a = document.createElement("a");
@@ -467,11 +426,13 @@ estadisticas.forEach(item => {
 
         console.log("✅ Archivo exportado con estilos y datos");
     } catch (error) {
-        console.error("❌ Error al exportar:", error);
+        console.error("❌ Error al exportar estadísticas:", error);
     }
+}
 
+// 👉 Exponer la función al global (para usar en el botón onclick)
+window.exportarEstadisticasConPlantilla = exportarEstadisticasConPlantilla;
 
-  }
 
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   try {
