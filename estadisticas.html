@@ -390,7 +390,7 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
     // 4. Cargar la plantilla
         const response = await fetch("Indicadores base.xlsx");
         const data = await response.arrayBuffer();
-    const wb = XLSX.read(arrayBuffer, { type: "array" });
+    
         const workbook = await XlsxPopulate.fromDataAsync(data);
         const sheet = workbook.sheet(0); // Hoja1
     const ws = wb.Sheets["Hoja1"];
