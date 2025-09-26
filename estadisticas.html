@@ -354,7 +354,15 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
   </script>
   <script>
 
-// Calcular totales por jornada
+
+async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
+  try {
+    if (!prestamos || prestamos.length === 0) {
+      alert("No hay datos para exportar.");
+      return;
+    }
+ const estadisticas = window.estadisticas;
+ // Calcular totales por jornada
 let totalServiciosMañana = 0;
 let totalServiciosTarde = 0;
 
@@ -364,14 +372,27 @@ estadisticas.forEach(item => {
 });
 
 // Total de servicios
-let totalServicios = totalServiciosMañana + totalServiciosTarde;
 
-async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
-  try {
-    if (!prestamos || prestamos.length === 0) {
-      alert("No hay datos para exportar.");
-      return;
-    }
+
+ estadisticas.forEach(item => {
+            // Servicios por jornada
+            totalServiciosMañana += item.mañana || 0;
+            totalServiciosTarde  += item.tarde  || 0;
+
+            // Servicios por tipo usuario
+            if (item.tipo === "DOCENTE") totalDocentes += (item.total || 0);
+            if (item.tipo === "ESTUDIANTE") totalEstudiantes += (item.total || 0);
+            if (item.tipo === "ADMINISTRATIVO") totalAdmins += (item.total || 0);
+
+            // Horas por equipo
+            totalHorasVideobeam += item.horasVideobeam || 0;
+            totalHorasPortatil  += item.horasPortatil || 0;
+            totalHorasOnescreen += item.horasOnescreen || 0;
+            totalHorasTV        += item.horasTV || 0;
+            totalHorasAnchor    += item.horasAnchor || 0;
+        });
+
+        let totalServicios = totalServiciosMañana + totalServiciosTarde;
 
     // 1. Totales por usuario
         const docentes    = estadisticas["DOCENTE"]       || { mañana: 0, tarde: 0 };
@@ -446,7 +467,9 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
     } catch (error) {
         console.error("❌ Error al exportar:", error);
     }
-}
+
+
+  }
 
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   try {
