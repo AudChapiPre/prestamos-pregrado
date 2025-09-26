@@ -221,17 +221,6 @@
   XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
 }
 
-// Calcular totales por jornada
-let totalServiciosMañana = 0;
-let totalServiciosTarde = 0;
-
-estadisticas.forEach(item => {
-    totalServiciosMañana += item.mañana || 0;
-    totalServiciosTarde  += item.tarde  || 0;
-});
-
-// Total de servicios
-let totalServicios = totalServiciosMañana + totalServiciosTarde;
 
 // Exponer al ámbito global
 window.exportarEstadisticas = exportarEstadisticas;
@@ -365,6 +354,17 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
   </script>
   <script>
 
+// Calcular totales por jornada
+let totalServiciosMañana = 0;
+let totalServiciosTarde = 0;
+
+estadisticas.forEach(item => {
+    totalServiciosMañana += item.mañana || 0;
+    totalServiciosTarde  += item.tarde  || 0;
+});
+
+// Total de servicios
+let totalServicios = totalServiciosMañana + totalServiciosTarde;
 
 async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
   try {
