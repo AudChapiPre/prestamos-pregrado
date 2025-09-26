@@ -366,6 +366,8 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
 let totalServiciosMañana = 0;
 let totalServiciosTarde = 0;
 
+console.log("👉 Estadisticas:", estadisticas);
+
 estadisticas.forEach(item => {
     totalServiciosMañana += item.mañana || 0;
     totalServiciosTarde  += item.tarde  || 0;
