@@ -381,11 +381,11 @@ async function exportarEstadisticasConPlantilla() {
         const totalServicios = totalDocentes + totalEstudiantes + totalAdmins;
 
         // === Totales de horas por equipo ===
-        const totalHorasVideobeam = ((docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0)).toFixed(1);
-        const totalHorasPortatil  = ((docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0)).toFixed(1);
-        const totalHorasOnescreen = ((docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0)).toFixed(1);
-        const totalHorasTV        = ((docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0)).toFixed(1);
-        const totalHorasAnchor    = ((docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0)).toFixed(1);
+        const totalHorasVideobeam = Math.round(((docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0)) * 10) / 10;
+        const totalHorasPortatil  = Math.round(((docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0)) * 10) / 10;
+        const totalHorasOnescreen = Math.round(((docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0)) * 10) / 10;
+        const totalHorasTV        = Math.round(((docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0)) * 10) / 10;
+        const totalHorasAnchor    = Math.round(((docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0)) * 10) / 10;
 
         // === 1. Cargar plantilla desde tu proyecto ===
         const response = await fetch("Indicadores base.xlsx");
