@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
+
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -387,10 +388,11 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
     });
 
     // 4. Cargar la plantilla
-    const resp = await fetch("Indicadores base.xlsx");
-    const arrayBuffer = await resp.arrayBuffer();
+        const response = await fetch("Indicadores base.xlsx");
+        const data = await response.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: "array" });
-
+        const workbook = await XlsxPopulate.fromDataAsync(data);
+        const sheet = workbook.sheet(0); // Hoja1
     const ws = wb.Sheets["Hoja1"];
     if (!ws) {
       alert("No se encontró la hoja 'Hoja1' en la plantilla.");
@@ -403,33 +405,37 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
   ws[cell].v = value;
 }
 
-    // 5. Escribir en las celdas
-    setCell(ws, "C4",  window.totalServicios || 0);
+     // 👉 Aquí colocamos los datos calculados
+        sheet.cell("C4").value(totalServicios);      // Salones
+        sheet.cell("C8").value(totalDocentes);      // Docentes
+        sheet.cell("C9").value(totalEstudiantes);   // Estudiantes
+        sheet.cell("C10").value(totalAdmins);       // Administrativos
+        sheet.cell("C12").value(totalServiciosMañana);
+        sheet.cell("C13").value(totalServiciosTarde);
+        sheet.cell("C18").value(totalEstudiantes);  
+        sheet.cell("C19").value(totalDocentes);     
+        sheet.cell("C20").value(totalAdmins);       
 
-    setCell(ws, "C8",  totalDocentes);
-    setCell(ws, "C9",  totalEstudiantes);
-    setCell(ws, "C10", totalAdmins);
+        // Horas por equipo
+        sheet.cell("C22").value(totalHorasVideobeam);
+        sheet.cell("C23").value(totalHorasPortatil);
+        sheet.cell("C25").value(totalHorasOnescreen);
+        sheet.cell("C26").value(totalHorasTV);
+        sheet.cell("C27").value(totalHorasAnchor);
 
-    setCell(ws, "C12", totalManana);
-    setCell(ws, "C13", totalTarde);
+        // Descargar archivo ya con estilos y datos
+        const blob = await workbook.outputAsync();
+        const url = window.URL.createObjectURL(new Blob([blob]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Estadisticas.xlsx";
+        a.click();
+        window.URL.revokeObjectURL(url);
 
-    setCell(ws, "C18", totalEstudiantes); // estudiante otra vez
-    setCell(ws, "C19", totalDocentes);    // docente otra vez
-    setCell(ws, "C20", totalAdmins);      // admin otra vez
-
-    setCell(ws, "C22", horasVideobeam + horasControlVB);
-    setCell(ws, "C23", horasPortatil);
-    setCell(ws, "C25", horasOneScreen);
-    setCell(ws, "C26", horasSmartTV);
-    setCell(ws, "C27", horasAnchor);
-    
-    // 6. Exportar nuevo archivo
-    XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
-    console.log("📊 Archivo de estadísticas exportado con éxito");
-  } catch (error) {
-    console.error("❌ Error al exportar estadísticas:", error);
-    alert("Ocurrió un error al exportar las estadísticas. Revisa la consola.");
-  }
+        console.log("✅ Archivo exportado con estilos y datos");
+    } catch (error) {
+        console.error("❌ Error al exportar:", error);
+    }
 }
 
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
