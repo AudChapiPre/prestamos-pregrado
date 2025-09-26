@@ -393,11 +393,7 @@ async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
     
         const workbook = await XlsxPopulate.fromDataAsync(data);
         const sheet = workbook.sheet(0); // Hoja1
-    const ws = wb.Sheets["Hoja1"];
-    if (!ws) {
-      alert("No se encontró la hoja 'Hoja1' en la plantilla.");
-      return;
-    }
+   
 
     function setCell(ws, cell, value) {
   if (!ws[cell]) ws[cell] = {};   // crea la celda si no existe
