@@ -381,11 +381,11 @@ async function exportarEstadisticasConPlantilla() {
         const totalServicios = totalDocentes + totalEstudiantes + totalAdmins;
 
         // === Totales de horas por equipo ===
-        const totalHorasVideobeam = (docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0);
-        const totalHorasPortatil  = (docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0);
-        const totalHorasOnescreen = (docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0);
-        const totalHorasTV        = (docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0);
-        const totalHorasAnchor    = (docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0);
+        const totalHorasVideobeam = ((docentes.horasVB || 0) + (estudiantes.horasVB || 0) + (admins.horasVB || 0)).toFixed(1);
+        const totalHorasPortatil  = ((docentes.horasPortatiles || 0) + (estudiantes.horasPortatiles || 0) + (admins.horasPortatiles || 0)).toFixed(1);
+        const totalHorasOnescreen = ((docentes.horasHDMIOneScreen || 0) + (estudiantes.horasHDMIOneScreen || 0) + (admins.horasHDMIOneScreen || 0)).toFixed(1);
+        const totalHorasTV        = ((docentes.horasHDMITV || 0) + (estudiantes.horasHDMITV || 0) + (admins.horasHDMITV || 0)).toFixed(1);
+        const totalHorasAnchor    = ((docentes.horasAnchors || 0) + (estudiantes.horasAnchors || 0) + (admins.horasAnchors || 0)).toFixed(1);
 
         // === 1. Cargar plantilla desde tu proyecto ===
         const response = await fetch("Indicadores base.xlsx");
@@ -402,8 +402,8 @@ async function exportarEstadisticasConPlantilla() {
         sheet.cell("C9").value(totalEstudiantes);
         sheet.cell("C10").value(totalAdmins);
 
-        sheet.cell("C12").value(totalServiciosMañana);
-        sheet.cell("C13").value(totalServiciosTarde);
+        sheet.cell("C13").value(totalServiciosMañana);
+        sheet.cell("C14").value(totalServiciosTarde);
 
         sheet.cell("C18").value(totalEstudiantes);
         sheet.cell("C19").value(totalDocentes);
