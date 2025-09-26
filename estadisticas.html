@@ -130,19 +130,24 @@
 
   <div class="container">
     <h2>Estadísticas de Préstamos</h2>
-    <button onclick="exportarEstadisticas()">Exportar a Excel</button>
+    <button onclick="exportarEstadisticasConPlantilla(window.prestamos, window.estadisticas)">
+  Exportar a Excel
+</button>
+
     
     <table id="tablaEstadisticas">
       <thead>
-        <tr>
-          <th>Tipo de Usuario</th>
-          <th>Servicios (Mañana)</th>
-          <th>Servicios (Tarde)</th>
-          <th>Horas Totales (HDMI)</th>
-          <th>Horas Totales (Portátiles)</th>
-          <th>Horas Totales (Anchors)</th>
-        </tr>
-      </thead>
+          <tr>
+            <th>Tipo de Usuario</th>
+            <th>Servicios (Mañana)</th>
+            <th>Servicios (Tarde)</th>
+            <th>Horas HDMI (TV)</th>
+            <th>Horas HDMI (OneScreen)</th>
+            <th>Horas Control (Videobeam)</th>
+            <th>Horas Portátiles</th>
+            <th>Horas Anchors</th>
+          </tr>
+        </thead>
       <tbody></tbody>
     </table>
   </div>
@@ -181,9 +186,11 @@
     "Tipo de Usuario",
     "Servicios (Mañana)",
     "Servicios (Tarde)",
-    "Horas Totales (HDMI)",
-    "Horas Totales (Portátiles)",
-    "Horas Totales (Anchors)"
+    "Horas HDMI TV",
+    "Horas HDMI OneScreen",
+    "Horas Control Videobeam",
+    "Horas Portátiles",
+    "Horas Anchors"
   ];
 
   const rows = [headers];
@@ -219,10 +226,11 @@ window.exportarEstadisticas = exportarEstadisticas;
 
     async function cargarEstadisticasDesdeFirestore() {
       const estadisticas = {
-        docentes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
-        estudiantes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
-        administrativos: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 }
-      };
+          docentes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
+          estudiantes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
+          administrativos: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 }
+        };
+
   
       const tipoMap = {
         docente: "docentes",
@@ -249,39 +257,60 @@ window.exportarEstadisticas = exportarEstadisticas;
   
         const horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
   
-        if ((p.equipos || []).includes("HDMI")) grupo.horasHDMI += horasNetas;
+        if ((p.equipos || []).includes("HDMI (TV)")) grupo.horasHDMITV += horasNetas;
+        if ((p.equipos || []).includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasNetas;
+        if ((p.equipos || []).includes("CONTROL VB")) grupo.horasVB += horasNetas;
         if ((p.equipos || []).some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
         if ((p.equipos || []).includes("ANCHOR")) grupo.horasAnchors += horasNetas;
       });
   
       // Renderizar tabla
       const tabla = document.querySelector("#tablaEstadisticas tbody");
-      tabla.innerHTML = `
-        <tr>
-          <td>Docentes</td>
-          <td>${estadisticas.docentes.mañana}</td>
-          <td>${estadisticas.docentes.tarde}</td>
-          <td>${estadisticas.docentes.horasHDMI.toFixed(2)}</td>
-          <td>${estadisticas.docentes.horasPortatiles.toFixed(2)}</td>
-          <td>${estadisticas.docentes.horasAnchors.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td>Estudiantes</td>
-          <td>${estadisticas.estudiantes.mañana}</td>
-          <td>${estadisticas.estudiantes.tarde}</td>
-          <td>${estadisticas.estudiantes.horasHDMI.toFixed(2)}</td>
-          <td>${estadisticas.estudiantes.horasPortatiles.toFixed(2)}</td>
-          <td>${estadisticas.estudiantes.horasAnchors.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td>Administrativos</td>
-          <td>${estadisticas.administrativos.mañana}</td>
-          <td>${estadisticas.administrativos.tarde}</td>
-          <td>${estadisticas.administrativos.horasHDMI.toFixed(2)}</td>
-          <td>${estadisticas.administrativos.horasPortatiles.toFixed(2)}</td>
-          <td>${estadisticas.administrativos.horasAnchors.toFixed(2)}</td>
-        </tr>
-      `;
+       tabla.innerHTML = `
+            <tr>
+              <td>Docentes</td>
+              <td>${estadisticas.docentes.mañana}</td>
+              <td>${estadisticas.docentes.tarde}</td>
+              <td>${estadisticas.docentes.horasHDMITV.toFixed(2)}</td>
+              <td>${estadisticas.docentes.horasHDMIOneScreen.toFixed(2)}</td>
+              <td>${estadisticas.docentes.horasVB.toFixed(2)}</td>
+              <td>${estadisticas.docentes.horasPortatiles.toFixed(2)}</td>
+              <td>${estadisticas.docentes.horasAnchors.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Estudiantes</td>
+              <td>${estadisticas.estudiantes.mañana}</td>
+              <td>${estadisticas.estudiantes.tarde}</td>
+              <td>${estadisticas.estudiantes.horasHDMITV.toFixed(2)}</td>
+              <td>${estadisticas.estudiantes.horasHDMIOneScreen.toFixed(2)}</td>
+              <td>${estadisticas.estudiantes.horasVB.toFixed(2)}</td>
+              <td>${estadisticas.estudiantes.horasPortatiles.toFixed(2)}</td>
+              <td>${estadisticas.estudiantes.horasAnchors.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Administrativos</td>
+              <td>${estadisticas.administrativos.mañana}</td>
+              <td>${estadisticas.administrativos.tarde}</td>
+              <td>${estadisticas.administrativos.horasHDMITV.toFixed(2)}</td>
+              <td>${estadisticas.administrativos.horasHDMIOneScreen.toFixed(2)}</td>
+              <td>${estadisticas.administrativos.horasVB.toFixed(2)}</td>
+              <td>${estadisticas.administrativos.horasPortatiles.toFixed(2)}</td>
+              <td>${estadisticas.administrativos.horasAnchors.toFixed(2)}</td>
+            </tr>
+          `;
+// Guardar los datos en variables globales
+window.estadisticas = estadisticas;
+window.prestamos = snapshot.docs.map(d => d.data());
+
+// Calcular total de servicios
+let totalServicios = 0;
+for (const tipo in estadisticas) {
+  totalServicios += estadisticas[tipo].mañana + estadisticas[tipo].tarde;
+}
+window.totalServicios = totalServicios;
+
+console.log("✅ Estadísticas y préstamos listos para exportar");
+
     }
   
     function calcularHorasNetas(horaEntrega, horaDevolucion) {
@@ -290,6 +319,13 @@ window.exportarEstadisticas = exportarEstadisticas;
       const diferencia = devolucion - entrega;
       return Math.max(0, diferencia / (1000 * 60 * 60)); // en horas
     }
+
+ 
+
+
+
+
+
   
     // Iniciar al cargar la página
     window.addEventListener("DOMContentLoaded", cargarEstadisticasDesdeFirestore);
@@ -314,6 +350,107 @@ window.exportarEstadisticas = exportarEstadisticas;
       alert("⚠️ Las estadísticas solo se han limpiado visualmente. Los datos en Firestore siguen intactos.");
     };
   </script>
+  <script>
+async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
+  try {
+    if (!prestamos || prestamos.length === 0) {
+      alert("No hay datos para exportar.");
+      return;
+    }
+
+    // 1. Totales por usuario
+        const docentes    = estadisticas["DOCENTE"]       || { mañana: 0, tarde: 0 };
+        const estudiantes = estadisticas["ESTUDIANTE"]    || { mañana: 0, tarde: 0 };
+        const admins      = estadisticas["ADMINISTRATIVO"]|| { mañana: 0, tarde: 0 };
+
+        const totalDocentes    = docentes.mañana + docentes.tarde;
+        const totalEstudiantes = estudiantes.mañana + estudiantes.tarde;
+        const totalAdmins      = admins.mañana + admins.tarde;
+
+        const totalManana = docentes.mañana + estudiantes.mañana + admins.mañana;
+        const totalTarde  = docentes.tarde  + estudiantes.tarde  + admins.tarde;
+
+const response = await fetch("Indicadores base.xlsx");
+const arrayBuffer = await response.arrayBuffer();
+const wb = XLSX.read(arrayBuffer, { type: "array" });
+ 
+    // 3. Totales de horas por equipo
+    let horasVideobeam = 0, horasPortatil = 0, horasOneScreen = 0, horasSmartTV = 0, horasAnchor = 0, horasControlVB = 0;
+
+    prestamos.forEach(p => {
+      const horas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+      (p.equipos || []).forEach(eq => {
+        if (eq === "VIDEOBEAM" || eq === "HDMI") horasVideobeam += horas; // soporta registros viejos con HDMI
+        if (eq === "PORTÁTIL LENOVO") horasPortatil += horas;
+        if (eq === "ONESCREEN") horasOneScreen += horas;
+        if (eq === "SMART TV") horasSmartTV += horas;
+        if (eq === "ANCHOR (PARLANTE)") horasAnchor += horas;
+        if (eq === "CONTROL VB") horasControlVB += horas;
+      });
+    });
+
+    // 4. Cargar la plantilla
+    const response = await fetch("Indicadores base.xlsx");
+    const arrayBuffer = await response.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, { type: "array" });
+
+    const ws = wb.Sheets["Hoja1"];
+    if (!ws) {
+      alert("No se encontró la hoja 'Hoja1' en la plantilla.");
+      return;
+    }
+
+    // 5. Escribir en las celdas
+    ws["C4"].v  = window.totalServicios || 0;  // Total servicios (salones)
+
+    ws["C8"].v  = totalDocentes;
+    ws["C9"].v  = totalEstudiantes;
+    ws["C10"].v = totalAdmins;
+
+    ws["C12"].v = totalManana;
+    ws["C13"].v = totalTarde;
+
+    ws["C18"].v = totalEstudiantes; // estudiante otra vez
+    ws["C19"].v = totalDocentes;    // docente otra vez
+    ws["C20"].v = totalAdmins;      // admin otra vez
+
+    ws["C22"].v = horasVideobeam + horasControlVB;
+    ws["C23"].v = horasPortatil;
+    ws["C25"].v = horasOneScreen;
+    ws["C26"].v = horasSmartTV;
+    ws["C27"].v = horasAnchor;
+
+    // 6. Exportar nuevo archivo
+    XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
+    console.log("📊 Archivo de estadísticas exportado con éxito");
+  } catch (error) {
+    console.error("❌ Error al exportar estadísticas:", error);
+    alert("Ocurrió un error al exportar las estadísticas. Revisa la consola.");
+  }
+}
+
+function calcularHorasNetas(horaEntrega, horaDevolucion) {
+  try {
+    if (!horaEntrega || !horaDevolucion) return 0;
+
+    // Convertir a formato Date usando el día de hoy
+    const hoy = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const inicio = new Date(`${hoy}T${horaEntrega}`);
+    const fin    = new Date(`${hoy}T${horaDevolucion}`);
+
+    // Calcular diferencia en horas
+    const diffMs = fin - inicio;
+    const diffHoras = diffMs / (1000 * 60 * 60);
+
+    return diffHoras > 0 ? diffHoras : 0;
+  } catch (e) {
+    console.error("Error en calcularHorasNetas:", e);
+    return 0;
+  }
+}
+
+</script>
+
   <b> © Juan Ladino - 2025 </b>
     
 </body>

@@ -120,9 +120,12 @@ debugLeerColeccionesPosibles();
       if (horaEntrega < 12) grupo.mañana++;
       else grupo.tarde++;
 
-      if (prestamoEliminado.equipos.includes("HDMI")) grupo.horasHDMI += horasNetas;
-      if (prestamoEliminado.equipos.some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
-      if (prestamoEliminado.equipos.includes("ANCHOR")) grupo.horasAnchors += horasNetas;
+        if (prestamoEliminado.equipos.includes("HDMI (TV)")) grupo.horasHDMITV += horasNetas;
+        if (prestamoEliminado.equipos.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasNetas;
+        if (prestamoEliminado.equipos.includes("CONTROL VB")) grupo.horasVB += horasNetas;
+        if (prestamoEliminado.equipos.some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
+        if (prestamoEliminado.equipos.includes("ANCHOR")) grupo.horasAnchors += horasNetas;
+
     }
 
     // Guardar estadísticas en local

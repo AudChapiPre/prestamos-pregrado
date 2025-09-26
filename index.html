@@ -324,15 +324,14 @@ if (typeof cargarDatos === "function") cargarDatos();
         <input type="time" id="horaDevolucion" placeholder="Hora estimada de devolución">
         
         <fieldset>
-            <legend>Equipo Prestado</legend>
-            <div class="checkbox-container">
-                <label><input type="checkbox" value="HDMI"> HDMI</label>
-                <label><input type="checkbox" value="CONTROL VB"> CONTROL VB</label>
-                <label><input type="checkbox" value="PORTATIL LENOVO"> PORTATIL LENOVO</label>
-                <label><input type="checkbox" value="PORTATIL DELL"> PORTATIL DELL</label>
-                <label><input type="checkbox" value="CARGADOR"> CARGADOR</label>
-                <label><input type="checkbox" value="ANCHOR"> ANCHOR</label>
-            </div>
+           <legend>Equipo Prestado</legend>
+              <div class="checkbox-container">
+                      <label><input type="checkbox" value="HDMI (TV)"> HDMI (TV)</label>
+                      <label><input type="checkbox" value="HDMI (ONESCREEN)"> HDMI (ONESCREEN)</label>
+                      <label><input type="checkbox" value="CONTROL VB"> CONTROL (Videobeam)</label>
+                      <label><input type="checkbox" value="PORTATIL LENOVO"> PORTATIL LENOVO</label>
+                      <label><input type="checkbox" value="ANCHOR"> ANCHOR</label>
+             </div>
             <input type="text" id="otros" placeholder="Otros equipos">
         </fieldset>
         
@@ -513,9 +512,12 @@ async function eliminarPrestamo(id) {
   if (horaEntrega < 12) cat.mañana++;
   else cat.tarde++;
 
-  if (prestamoEliminado.equipos.includes("HDMI")) cat.horasHDMI += horasNetas;
-  if (prestamoEliminado.equipos.includes("PORTATIL LENOVO") || prestamoEliminado.equipos.includes("PORTATIL DELL")) cat.horasPortatiles += horasNetas;
-  if (prestamoEliminado.equipos.includes("ANCHOR")) cat.horasAnchors += horasNetas;
+      if (prestamoEliminado.equipos.includes("HDMI (TV)")) cat.horasHDMITV += horasNetas;
+      if (prestamoEliminado.equipos.includes("HDMI (ONESCREEN)")) cat.horasHDMIOneScreen += horasNetas;
+      if (prestamoEliminado.equipos.includes("CONTROL VB")) cat.horasVB += horasNetas;
+      if (prestamoEliminado.equipos.some(e => e.includes("PORTATIL"))) cat.horasPortatiles += horasNetas;
+      if (prestamoEliminado.equipos.includes("ANCHOR")) cat.horasAnchors += horasNetas;
+
 
   await setDoc(estadRef, estadisticas);
   cargarDatos();
