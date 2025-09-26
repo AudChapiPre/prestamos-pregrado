@@ -221,6 +221,17 @@
   XLSX.writeFile(wb, "Estadisticas_Prestamos.xlsx");
 }
 
+// Calcular totales por jornada
+let totalServiciosMañana = 0;
+let totalServiciosTarde = 0;
+
+estadisticas.forEach(item => {
+    totalServiciosMañana += item.mañana || 0;
+    totalServiciosTarde  += item.tarde  || 0;
+});
+
+// Total de servicios
+let totalServicios = totalServiciosMañana + totalServiciosTarde;
 
 // Exponer al ámbito global
 window.exportarEstadisticas = exportarEstadisticas;
@@ -303,6 +314,7 @@ window.exportarEstadisticas = exportarEstadisticas;
 window.estadisticas = estadisticas;
 window.prestamos = snapshot.docs.map(d => d.data());
 
+
 // Calcular total de servicios
 let totalServicios = 0;
 for (const tipo in estadisticas) {
@@ -352,6 +364,8 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
     };
   </script>
   <script>
+
+
 async function exportarEstadisticasConPlantilla(prestamos, estadisticas) {
   try {
     if (!prestamos || prestamos.length === 0) {
