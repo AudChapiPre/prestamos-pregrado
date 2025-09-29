@@ -635,7 +635,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
   const lineas = textoDocx.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
   const horasPorAuditorio = {};
-  const solicitudesPorAuditorio = {};
+ 
   let nombresOtros = [];
 
   for (let i = 0; i < lineas.length; i++) {
