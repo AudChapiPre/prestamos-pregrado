@@ -530,14 +530,25 @@ function calcularHorasDesdeTexto(texto) {
                 const horas = (finDate - inicioDate) / (1000 * 60 * 60);
 
                 // Buscar ubicación
+                // Buscar ubicación en las siguientes líneas
                 let ubicacion = "Sin auditorio";
                 for (let j = 1; j <= 4; j++) {
                     const lineaUbic = lineas[i + j];
-                    if (lineaUbic && /ubicaci[óo6]n/i.test(lineaUbic)) {
-                        ubicacion = lineaUbic.split(":")[1]?.trim() || "Sin auditorio";
-                        break;
+                    if (lineaUbic) {
+                        let normalizada = lineaUbic
+                            .toLowerCase()
+                            .replace(/6/g, "ó")
+                            .replace(/0/g, "o")
+                            .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // quita tildes raras
+
+                        if (normalizada.includes("ubicacion")) {
+                            ubicacion = lineaUbic.split(":")[1]?.trim() || "Sin auditorio";
+                            console.log("📍 Ubicación detectada en línea:", lineaUbic, "->", ubicacion);
+                            break;
+                        }
                     }
                 }
+
 
                 totalHoras += horas;
                 auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
