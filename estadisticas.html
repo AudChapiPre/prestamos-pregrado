@@ -501,8 +501,8 @@ document.getElementById("archivoDocx").addEventListener("change", function (even
 function calcularHorasDesdeTexto(texto) {
     const lineas = texto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
 
-    // Regex que acepta texto extra después de la hora final
-    const regexHoras = /(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
+    // Acepta "Lun 01/09/2025" con o sin día de la semana
+    const regexHoras = /(?:Lun|Mar|Mie|Mié|Jue|Vie|Sab|Sáb|Dom)\s+(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
 
     let totalHoras = 0;
     let auditorios = {};
@@ -531,11 +531,10 @@ function calcularHorasDesdeTexto(texto) {
                     }
                 }
 
-                // Sumar al total
                 totalHoras += horas;
                 auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
 
-                // 🔎 Log de depuración
+                // Log detallado
                 console.log(`Evento encontrado: ${lineas[i]}`);
                 console.log(` → Inicio: ${inicio}, Fin: ${fin}, Horas: ${horas}`);
                 console.log(` → Ubicación detectada: ${ubicacion}`);
@@ -549,6 +548,7 @@ function calcularHorasDesdeTexto(texto) {
     console.log("Resumen final:", auditorios, "Total horas:", totalHoras);
     return { totalHoras, auditorios };
 }
+
 
 
 
