@@ -699,7 +699,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
   // Totales oficiales
   const totalHoras = auditoriosValidos.reduce((acc, a) => acc + horasPorAuditorio[a], 0);
   const totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
-totalSolicitudes = Object.values(solicitudesPorAuditorio).reduce((a, b) => a + b, 0);
+
 
   // Texto de totales
 let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
