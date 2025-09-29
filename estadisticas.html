@@ -434,7 +434,8 @@ async function exportarEstadisticasConPlantilla() {
         sheet.cell("C25").value(totalHorasOnescreen);
         sheet.cell("C26").value(totalHorasTV);
         sheet.cell("C27").value(totalHorasAnchor);
-       
+        sheet.cell("C39").value(window.totalSolicitudes);
+        sheet.cell("C5").value(window.totalSolicitudes);
         // 🔹 Auditorios → celdas en la plantilla
         const mapaAuditoriosCeldas = {
           "AZUL": "C30",
@@ -696,9 +697,11 @@ async function mostrarGraficaAuditorios(textoDocx) {
   delete horasPorAuditorio["OTRO"];
   delete solicitudesPorAuditorio["OTRO"];
 
-  // Totales oficiales
-  const totalHoras = auditoriosValidos.reduce((acc, a) => acc + horasPorAuditorio[a], 0);
-  const totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
+
+// Totales oficiales
+const totalHoras = auditoriosValidos.reduce((acc, a) => acc + horasPorAuditorio[a], 0);
+window.totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
+
 
 
   // Texto de totales
@@ -741,9 +744,10 @@ document.getElementById("total-horas-auditorios").textContent = totalTexto;
   window.auditoriosHoras = horasPorAuditorio;
   window.auditoriosSolicitudes = solicitudesPorAuditorio;
   window.auditoriosOtros = { horas: horasOtros, solicitudes: solicitudesOtros, nombres: nombresOtros };
+
 }
 
- sheet.cell("C39").value(totalSolicitudes);
+
 
 // Si subieron el docx
 if (window.auditoriosHoras) {
