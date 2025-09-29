@@ -563,135 +563,88 @@ function calcularHorasDesdeTexto(texto) {
 
 // Mostrar gráfica con Chart.js
 async function mostrarGraficaAuditorios(textoDocx) {
-  // Aceptar distintos tipos de input
-  let texto = '';
-  if (typeof textoDocx === 'string') {
-    texto = textoDocx;
-  } else if (textoDocx && typeof textoDocx.value === 'string') {
-    texto = textoDocx.value;
-  } else if (textoDocx instanceof ArrayBuffer) {
-    const res = await mammoth.extractRawText({ arrayBuffer: textoDocx });
-    texto = res.value;
-  } else {
-    try {
-      texto = String(textoDocx);
-    } catch (e) {
-      console.error("mostrarGraficaAuditorios: no pude convertir input a texto", e);
-      return;
-    }
-  }
-
-  // Preparar líneas limpias
+  let texto = typeof textoDocx === "string" ? textoDocx : (textoDocx?.value || String(textoDocx));
   const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-  const horasPorAuditorio = {};
-  let ultimaUbicacion = null;
 
-  // Bucle: detecta ubicaciones y horas; si la ubic viene antes, la guarda y la aplica a la siguiente hora;
-  // si la ubic viene después, buscamos hacia atrás cuando encontremos la hora.
+  const horasPorAuditorio = {};
+
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
 
-    // 1) Detectar ubicación (tolerante a "Ubicación", "Ubicacion", "Ubicaci6n", etc.)
-    const matchUb = linea.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
-    if (matchUb) {
-      // normalizar: quitar espacios dobles y dejar en mayúsculas para unificar las keys
-      const raw = matchUb[1].trim();
-      ultimaUbicacion = raw.replace(/\s+/g, ' ').toUpperCase();
-      console.log("📍 Ubicación detectada (línea " + i + "):", raw, "->", ultimaUbicacion);
-      continue;
-    }
-
-    // 2) Detectar horario (muy flexible): "de 8:00 a 12:00", "8:00 - 12:00", "8:00 a 12:00"
+    // Detectar horario
     const matchHoras = linea.match(/(?:de\s*)?(\d{1,2}:\d{2})\s*(?:a|-)\s*(\d{1,2}:\d{2})/i);
     if (matchHoras) {
       const inicioStr = matchHoras[1];
       const finStr = matchHoras[2];
 
-      // Si no tenemos última ubicación, buscar hacia atrás hasta N líneas
-      let ubic = ultimaUbicacion;
-      if (!ubic) {
-        for (let k = 1; k <= 6; k++) {
-          const prev = lineas[i - k];
-          if (!prev) break;
-          const m = prev.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
-          if (m) {
-            ubic = m[1].trim().replace(/\s+/g, ' ').toUpperCase();
-            console.log("📍 Ubicación encontrada hacia atrás (línea", i - k, "):", ubic);
-            break;
-          }
+      // Buscar ubicación más cercana (hasta 6 líneas hacia atrás o adelante)
+      let ubic = null;
+      for (let k = 1; k <= 6; k++) {
+        const prev = lineas[i - k];
+        const next = lineas[i + k];
+        if (prev) {
+          const mPrev = prev.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
+          if (mPrev) { ubic = mPrev[1].trim().toUpperCase(); break; }
+        }
+        if (next) {
+          const mNext = next.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
+          if (mNext) { ubic = mNext[1].trim().toUpperCase(); break; }
         }
       }
+      if (!ubic) ubic = "SIN AUDITORIO";
 
-      // Calcular diferencia en minutos y convertir a horas (maneja cruce de medianoche)
+      // Calcular horas
       const toMinutes = s => { const [h, m] = s.split(':').map(Number); return h*60 + m; };
       let diffMin = toMinutes(finStr) - toMinutes(inicioStr);
       if (diffMin < 0) diffMin += 24 * 60;
-      const horas = Math.round((diffMin / 60) * 10) / 10; // 1 decimal
+      const horas = Math.round((diffMin / 60) * 10) / 10;
 
-      // Si no hay ubicación aún, marcar como "Sin auditorio"
-      if (!ubic) {
-        ubic = "SIN AUDITORIO";
-        console.warn("⚠️ Horario detectado pero sin ubicación asignada (línea", i, "):", linea);
-      }
-
+      // Sumar al auditorio correcto
       horasPorAuditorio[ubic] = (horasPorAuditorio[ubic] || 0) + horas;
       console.log(`✅ Evento: "${linea}" -> ${horas} h -> ${ubic}`);
-
-      // (opcional) resetear ultimaUbicacion para no aplicarla a la próxima hora si quieres eso:
-      // ultimaUbicacion = null;
     }
   }
 
-  // Resultado final
+  // Calcular total
   const totalHoras = Object.values(horasPorAuditorio).reduce((a, b) => a + b, 0);
   console.table(horasPorAuditorio);
-  console.log("🟢 Total horas:", totalHoras);
+  document.getElementById("total-horas-auditorios").textContent =
+    `Total horas auditorios: ${totalHoras.toFixed(1)}`;
 
-  // Guardar global para exportar después
-  window.auditoriosHoras = horasPorAuditorio;
-
-  // Mostrar total en la página
-  const elTotal = document.getElementById('total-horas-auditorios');
-  if (elTotal) elTotal.textContent = `Total horas auditorios: ${totalHoras.toFixed(1)}`;
-
-  // Dibujar gráfica (Chart.js) — destruimos la anterior si existía
-  const labels = Object.keys(horasPorAuditorio);
-  const data = labels.map(l => Math.round(horasPorAuditorio[l] * 10) / 10);
-
-  if (!document.getElementById('grafica-auditorios')) {
-    console.warn("No existe canvas#grafica-auditorios para dibujar.");
-    return;
-  }
-
-  // destruir chart existente si existe
-  if (window._chartAuditorios) {
-    try { window._chartAuditorios.destroy(); } catch(e) {}
-    window._chartAuditorios = null;
-  }
-
-  const ctx = document.getElementById('grafica-auditorios').getContext('2d');
+  // Dibujar gráfica con Chart.js
+  const ctx = document.getElementById("grafica-auditorios").getContext("2d");
+  if (window._chartAuditorios) window._chartAuditorios.destroy();
   window._chartAuditorios = new Chart(ctx, {
-    type: 'bar',
+    type: "bar",
     data: {
-      labels,
+      labels: Object.keys(horasPorAuditorio),
       datasets: [{
-        label: 'Horas por auditorio',
-        data,
-        backgroundColor: 'rgba(75,192,192,0.6)',
-        borderColor: 'rgba(75,192,192,1)',
+        label: "Horas por auditorio",
+        data: Object.values(horasPorAuditorio),
+        backgroundColor: "rgba(75,192,192,0.6)",
+        borderColor: "rgba(75,192,192,1)",
         borderWidth: 1
       }]
     },
     options: {
       responsive: true,
       plugins: {
-        title: { display: true, text: `Total horas auditorios: ${totalHoras.toFixed(1)}` },
-        legend: { display: false }
+        legend: { display: false },
+        title: { display: true, text: `Total horas: ${totalHoras.toFixed(1)}` }
       },
-      scales: { y: { beginAtZero: true, title: { display: true, text: 'Horas' } } }
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Horas" }
+        }
+      }
     }
   });
+
+  // Guardar global para exportar a Excel después
+  window.auditoriosHoras = horasPorAuditorio;
 }
+
 
 
 // Si subieron el docx
