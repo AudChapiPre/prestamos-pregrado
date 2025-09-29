@@ -2,6 +2,8 @@
 <html lang="es">
 <head>
   <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+
 
 
   <meta charset="UTF-8">
@@ -152,6 +154,11 @@
       <tbody></tbody>
     </table>
   </div>
+
+  <h3>Subir calendario de auditorios (.docx)</h3>
+<input type="file" id="archivoDocx" accept=".docx" />
+<canvas id="graficaAuditorios"></canvas>
+
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
@@ -458,6 +465,110 @@ function calcularHorasNetas(horaEntrega, horaDevolucion) {
 }
 // Exponer la función al ámbito global
 window.exportarEstadisticasConPlantilla = exportarEstadisticasConPlantilla;
+
+
+
+document.getElementById("archivoDocx").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (loadEvent) {
+        const arrayBuffer = loadEvent.target.result;
+        mammoth.extractRawText({arrayBuffer: arrayBuffer})
+            .then(function(result) {
+                const texto = result.value;
+                console.log("Texto del DOCX:", texto);
+
+                const { totalHoras, auditorios } = calcularHorasDesdeTexto(texto);
+
+                // Guardar en global para exportación
+                window.auditoriosHoras = auditorios;
+
+                // Renderizar gráfica
+                mostrarGraficaAuditorios(auditorios, totalHoras);
+            })
+            .catch(function(err) {
+                console.error("Error leyendo DOCX:", err);
+            });
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// Parser de horarios
+function calcularHorasDesdeTexto(texto) {
+    const lineas = texto.split("\n");
+    const regexHoras = /(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})/;
+
+    let totalHoras = 0;
+    let auditorios = {};
+
+    for (let i = 0; i < lineas.length; i++) {
+        const match = regexHoras.exec(lineas[i]);
+        if (match) {
+            const fecha = match[1];
+            const inicio = match[2];
+            const fin = match[3];
+
+            const fechaISO = fecha.split("/").reverse().join("-");
+            const inicioDate = new Date(`${fechaISO}T${inicio}:00`);
+            const finDate = new Date(`${fechaISO}T${fin}:00`);
+
+            if (!isNaN(inicioDate) && !isNaN(finDate)) {
+                const horas = (finDate - inicioDate) / (1000 * 60 * 60);
+                totalHoras += horas;
+
+                // Ubicación puede variar en tilde o errores → normalizamos
+                let ubicacion = "Sin auditorio";
+                if (lineas[i + 1] && lineas[i + 1].toLowerCase().includes("ubicac")) {
+                    ubicacion = lineas[i + 1].split(":")[1]?.trim() || "Sin auditorio";
+                }
+
+                auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
+            }
+        }
+    }
+
+    return { totalHoras, auditorios };
+}
+
+// Mostrar gráfica con Chart.js
+function mostrarGraficaAuditorios(auditorios, total) {
+    const ctx = document.getElementById("graficaAuditorios").getContext("2d");
+    const labels = Object.keys(auditorios);
+    const data = Object.values(auditorios);
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Horas por auditorio",
+                data: data,
+                backgroundColor: "rgba(75, 192, 192, 0.6)"
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Total horas auditorios: ${total.toFixed(1)}`
+                }
+            }
+        }
+    });
+}
+
+// Si subieron el docx
+if (window.auditoriosHoras) {
+    let fila = 30; // ejemplo: empieza en fila 30
+    for (const [nombre, horas] of Object.entries(window.auditoriosHoras)) {
+        sheet.cell(`B${fila}`).value(nombre);
+        sheet.cell(`C${fila}`).value(Math.round(horas * 10) / 10); // redondeado
+        fila++;
+    }
+}
 
 </script>
 
