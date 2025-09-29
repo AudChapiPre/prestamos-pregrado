@@ -429,6 +429,29 @@ async function exportarEstadisticasConPlantilla() {
         sheet.cell("C26").value(totalHorasTV);
         sheet.cell("C27").value(totalHorasAnchor);
 
+        // 🔹 Auditorios → celdas en la plantilla
+        const mapaAuditoriosCeldas = {
+          "AZUL": "C30",
+          "ROJO": "C31",
+          "SALA 1": "C32",
+          "SALA 2": "C33",
+          "EXPOSICIONES A Y B": "C34",
+          "CINCUENTENARIO": "C35",
+          "HNO MARTIN": "C36",
+          "CONCEJO ACADEMICO": "C37",
+          "TEATRO": "C38"
+        };
+
+// 🔹 Escribir cada auditorio en su celda correspondiente
+for (let aud in mapaAuditoriosCeldas) {
+  const celda = mapaAuditoriosCeldas[aud];
+  const valor = solicitudesPorAuditorio[aud] || 0;
+  ws[celda] = { t: "n", v: valor };
+}
+
+// 🔹 Total de servicios (todas las solicitudes de auditorios) → C39
+ws["C39"] = { t: "n", v: totalSolicitudes };
+
         // === 4. Descargar archivo con los datos + estilos ===
         const blob = await workbook.outputAsync();
         const url = window.URL.createObjectURL(new Blob([blob]));
