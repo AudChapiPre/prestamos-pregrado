@@ -561,30 +561,39 @@ function calcularHorasDesdeTexto(texto) {
 const auditoriosValidos = [
   "AZUL",
   "ROJO",
-  "SALA SUSTENTACIONES 1",
-  "SALA SUSTENTACIONES 2",
+  "SALA 1",
+  "SALA 2",
   "EXPOSICIONES A Y B",
   "CINCUENTENARIO",
   "HNO MARTIN",
   "CONCEJO ACADEMICO",
-  "TEATRO",
-  "BAUSCH & LOMB"
+  "TEATRO"
 ];
 
 // Inicializar Fuse.js para fuzzy matching
 const fuse = new Fuse(auditoriosValidos, {
   includeScore: true,
-  threshold: 0.4 // mientras más bajo, más estricto (0.4 es un buen equilibrio)
+  threshold: 0.4
 });
 
 function normalizarAuditorio(nombre) {
-  if (!nombre) return "SIN AUDITORIO";
-  nombre = nombre.toUpperCase().trim();
-  const result = fuse.search(nombre);
-  if (result.length > 0) {
-    return result[0].item; // el más parecido de la lista
-  }
-  return "OTRO"; // si no se parece a nada, lo manda a "OTRO"
+  if (!nombre) return "OTRO";
+
+  let n = nombre.toUpperCase().trim();
+
+  // Reglas específicas (correcciones manuales)
+  if (n.includes("SUSTENTACIONES 1")) return "SALA 1";
+  if (n.includes("SUSTENTACIONES 2")) return "SALA 2";
+  if (n.includes("SALA DE JUNTAS")) return "CONCEJO ACADEMICO";
+  if (n.includes("EXPOSICIONES")) return "EXPOSICIONES A Y B";
+  if (n.includes("CINCUENTENARIO")) return "CINCUENTENARIO";
+  if (n.includes("HNO") || n.includes("MARTIN")) return "HNO MARTIN";
+
+  // Fuzzy matching para casos como "VAUSCH"
+  const result = fuse.search(n);
+  if (result.length > 0) return result[0].item;
+
+  return "OTRO";
 }
 
 
@@ -595,6 +604,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
 
   const horasPorAuditorio = {};
   const solicitudesPorAuditorio = {};
+  let nombresOtros = [];
 
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
@@ -612,16 +622,17 @@ async function mostrarGraficaAuditorios(textoDocx) {
         const next = lineas[i + k];
         if (prev) {
           const mPrev = prev.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
-          if (mPrev) { ubic = mPrev[1].trim().toUpperCase(); break; }
+          if (mPrev) { ubic = mPrev[1].trim(); break; }
         }
         if (next) {
           const mNext = next.match(/ubicaci[oó6]n[:\-\s]*([\s\S]+)/i);
-          if (mNext) { ubic = mNext[1].trim().toUpperCase(); break; }
+          if (mNext) { ubic = mNext[1].trim(); break; }
         }
       }
 
-      // Normalizar con Fuse
-      ubic = normalizarAuditorio(ubic);
+      // Normalizar
+      const ubicNormalizada = normalizarAuditorio(ubic);
+      if (ubicNormalizada === "OTRO" && ubic) nombresOtros.push(ubic);
 
       // Calcular horas
       const toMinutes = s => { const [h, m] = s.split(":").map(Number); return h*60 + m; };
@@ -629,45 +640,51 @@ async function mostrarGraficaAuditorios(textoDocx) {
       if (diffMin < 0) diffMin += 24*60;
       const horas = Math.round((diffMin / 60) * 10) / 10;
 
-      // Sumar
-      horasPorAuditorio[ubic] = (horasPorAuditorio[ubic] || 0) + horas;
-      solicitudesPorAuditorio[ubic] = (solicitudesPorAuditorio[ubic] || 0) + 1;
+      // Acumular
+      horasPorAuditorio[ubicNormalizada] = (horasPorAuditorio[ubicNormalizada] || 0) + horas;
+      solicitudesPorAuditorio[ubicNormalizada] = (solicitudesPorAuditorio[ubicNormalizada] || 0) + 1;
     }
   }
 
-  // Separar "OTRO" del resto
+  // Inicializar todos los auditorios oficiales en 0 si no aparecieron
+  auditoriosValidos.forEach(a => {
+    if (!horasPorAuditorio[a]) horasPorAuditorio[a] = 0;
+    if (!solicitudesPorAuditorio[a]) solicitudesPorAuditorio[a] = 0;
+  });
+
+  // Extraer y quitar "OTRO" de los cálculos
   const horasOtros = horasPorAuditorio["OTRO"] || 0;
   const solicitudesOtros = solicitudesPorAuditorio["OTRO"] || 0;
   delete horasPorAuditorio["OTRO"];
   delete solicitudesPorAuditorio["OTRO"];
 
-  // Totales solo con auditorios válidos
-  const totalHoras = Object.values(horasPorAuditorio).reduce((a,b)=>a+b,0);
-  const totalSolicitudes = Object.values(solicitudesPorAuditorio).reduce((a,b)=>a+b,0);
+  // Totales oficiales
+  const totalHoras = auditoriosValidos.reduce((acc, a) => acc + horasPorAuditorio[a], 0);
+  const totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
 
-  // Mostrar totales
+  // Texto de totales
   let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
   if (solicitudesOtros > 0) {
-    totalTexto += ` ⚠️ Otros: ${solicitudesOtros} solicitudes (${horasOtros.toFixed(1)} h)`;
+    totalTexto += ` ⚠️ Otros: ${solicitudesOtros} solicitudes (${horasOtros.toFixed(1)} h) [${nombresOtros.join(", ")}]`;
   }
   document.getElementById("total-horas-auditorios").textContent = totalTexto;
 
-  // Dibujar gráfica (sin "OTRO")
+  // Dibujar gráfica
   const ctx = document.getElementById("grafica-auditorios").getContext("2d");
   if (window._chartAuditorios) window._chartAuditorios.destroy();
   window._chartAuditorios = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: Object.keys(solicitudesPorAuditorio),
+      labels: auditoriosValidos,
       datasets: [
         {
           label: "Solicitudes",
-          data: Object.values(solicitudesPorAuditorio),
+          data: auditoriosValidos.map(a => solicitudesPorAuditorio[a]),
           backgroundColor: "rgba(153,102,255,0.6)"
         },
         {
           label: "Horas",
-          data: Object.values(horasPorAuditorio),
+          data: auditoriosValidos.map(a => horasPorAuditorio[a]),
           backgroundColor: "rgba(75,192,192,0.6)"
         }
       ]
@@ -684,7 +701,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
   // Guardar global
   window.auditoriosHoras = horasPorAuditorio;
   window.auditoriosSolicitudes = solicitudesPorAuditorio;
-  window.auditoriosOtros = { horas: horasOtros, solicitudes: solicitudesOtros };
+  window.auditoriosOtros = { horas: horasOtros, solicitudes: solicitudesOtros, nombres: nombresOtros };
 }
 
 
