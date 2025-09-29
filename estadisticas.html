@@ -502,7 +502,9 @@ function calcularHorasDesdeTexto(texto) {
     const lineas = texto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
 
     // Acepta "Lun 01/09/2025" con o sin día de la semana
-    const regexHoras = /(?:Lun|Mar|Mie|Mié|Jue|Vie|Sab|Sáb|Dom)\s+(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
+    // Día de semana opcional + fechas flexibles + horas flexibles
+    const regexHoras = /(?:Lun|Mar|Mie|Mié|Jue|Vie|Sab|Sáb|Dom)?\s*(\d{1,2}\/\d{1,2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
+
 
     let totalHoras = 0;
     let auditorios = {};
