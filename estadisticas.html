@@ -582,12 +582,15 @@ function normalizarAuditorio(nombre) {
   let n = nombre.toUpperCase().trim();
 
   // Reglas específicas (correcciones manuales)
-  if (n.includes("SUSTENTACIONES 1")) return "SALA 1";
-  if (n.includes("SUSTENTACIONES 2")) return "SALA 2";
-  if (n.includes("SALA DE JUNTAS")) return "CONCEJO ACADEMICO";
-  if (n.includes("EXPOSICIONES")) return "EXPOSICIONES A Y B";
+  if (n.includes("SALA DE SUSTENTACION 4")) return "SALA 1";
+  if (n.includes("SALA DE SUSTENTACION 5")) return "SALA 2";
+  if (n.includes("SALAS DE EXPOSICION A Y B")) return "EXPOSICIONES A Y B";
+  if (n.includes("AUDITORIO ROJO")) return "ROJO";
+  if (n.includes("AUDITORIO AZUL")) return "AZUL";
+  if (n.includes("SALA DE JUNTAS") || n.includes("FUNDADORES")) return "CONCEJO ACADEMICO";
   if (n.includes("CINCUENTENARIO")) return "CINCUENTENARIO";
   if (n.includes("HNO") || n.includes("MARTIN")) return "HNO MARTIN";
+  if (n.includes("TEATRO")) return "TEATRO";
 
   // Fuzzy matching para casos como "VAUSCH"
   const result = fuse.search(n);
