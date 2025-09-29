@@ -501,29 +501,35 @@ document.getElementById("archivoDocx").addEventListener("change", function (even
 function calcularHorasDesdeTexto(texto) {
     const lineas = texto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
 
-    // Acepta "Lun 01/09/2025" con o sin día de la semana
-    // Día de semana opcional + fechas flexibles + horas flexibles
-    const regexHoras = /(?:Lun|Mar|Mie|Mié|Jue|Vie|Sab|Sáb|Dom)?\s*(\d{1,2}\/\d{1,2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
-
+    // Regex flexible: fecha + 2 horas
+    const regexHoras = /(\d{1,2}\/\d{1,2}\/\d{4}).*?(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/;
 
     let totalHoras = 0;
     let auditorios = {};
 
     for (let i = 0; i < lineas.length; i++) {
-        const match = regexHoras.exec(lineas[i]);
+        let cleanLine = lineas[i].replace(/\s+/g, " ").trim();
+        const match = regexHoras.exec(cleanLine);
+
         if (match) {
             const fecha = match[1];
             const inicio = match[2];
             const fin = match[3];
 
-            const fechaISO = fecha.split("/").reverse().join("-");
+            // Normalizar fecha
+            const partes = fecha.split("/");
+            const dia = partes[0].padStart(2, "0");
+            const mes = partes[1].padStart(2, "0");
+            const año = partes[2];
+            const fechaISO = `${año}-${mes}-${dia}`;
+
             const inicioDate = new Date(`${fechaISO}T${inicio}:00`);
             const finDate = new Date(`${fechaISO}T${fin}:00`);
 
             if (!isNaN(inicioDate) && !isNaN(finDate)) {
                 const horas = (finDate - inicioDate) / (1000 * 60 * 60);
 
-                // Buscar ubicación en las siguientes 4 líneas
+                // Buscar ubicación
                 let ubicacion = "Sin auditorio";
                 for (let j = 1; j <= 4; j++) {
                     const lineaUbic = lineas[i + j];
@@ -536,20 +542,20 @@ function calcularHorasDesdeTexto(texto) {
                 totalHoras += horas;
                 auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
 
-                // Log detallado
-                console.log(`Evento encontrado: ${lineas[i]}`);
+                console.log(`✅ Evento: ${cleanLine}`);
                 console.log(` → Inicio: ${inicio}, Fin: ${fin}, Horas: ${horas}`);
-                console.log(` → Ubicación detectada: ${ubicacion}`);
-                console.log("-----------------------------------");
-            } else {
-                console.warn("Fecha inválida en línea:", lineas[i]);
+                console.log(` → Ubicación: ${ubicacion}`);
             }
+        } else {
+            console.warn("⚠️ Línea ignorada:", JSON.stringify(cleanLine));
         }
     }
 
-    console.log("Resumen final:", auditorios, "Total horas:", totalHoras);
+    console.table(auditorios);
+    console.log("Total horas:", totalHoras);
     return { totalHoras, auditorios };
 }
+
 
 
 
