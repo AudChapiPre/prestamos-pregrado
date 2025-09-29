@@ -629,26 +629,30 @@ async function mostrarGraficaAuditorios(textoDocx) {
       if (diffMin < 0) diffMin += 24*60;
       const horas = Math.round((diffMin / 60) * 10) / 10;
 
-      // Sumar a horas y solicitudes
+      // Sumar
       horasPorAuditorio[ubic] = (horasPorAuditorio[ubic] || 0) + horas;
       solicitudesPorAuditorio[ubic] = (solicitudesPorAuditorio[ubic] || 0) + 1;
-
-      console.log(`✅ ${ubic}: +${horas}h (solicitud #${solicitudesPorAuditorio[ubic]})`);
     }
   }
 
+  // Separar "OTRO" del resto
+  const horasOtros = horasPorAuditorio["OTRO"] || 0;
+  const solicitudesOtros = solicitudesPorAuditorio["OTRO"] || 0;
+  delete horasPorAuditorio["OTRO"];
+  delete solicitudesPorAuditorio["OTRO"];
+
+  // Totales solo con auditorios válidos
   const totalHoras = Object.values(horasPorAuditorio).reduce((a,b)=>a+b,0);
   const totalSolicitudes = Object.values(solicitudesPorAuditorio).reduce((a,b)=>a+b,0);
 
-  console.table(horasPorAuditorio);
-  console.table(solicitudesPorAuditorio);
-  console.log("🟢 Total horas:", totalHoras, " | 🟢 Total solicitudes:", totalSolicitudes);
+  // Mostrar totales
+  let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
+  if (solicitudesOtros > 0) {
+    totalTexto += ` ⚠️ Otros: ${solicitudesOtros} solicitudes (${horasOtros.toFixed(1)} h)`;
+  }
+  document.getElementById("total-horas-auditorios").textContent = totalTexto;
 
-  // Mostrar en HTML
-  document.getElementById("total-horas-auditorios").textContent =
-    `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
-
-  // Gráfica de solicitudes
+  // Dibujar gráfica (sin "OTRO")
   const ctx = document.getElementById("grafica-auditorios").getContext("2d");
   if (window._chartAuditorios) window._chartAuditorios.destroy();
   window._chartAuditorios = new Chart(ctx, {
@@ -677,9 +681,10 @@ async function mostrarGraficaAuditorios(textoDocx) {
     }
   });
 
-  // Guardar global para exportar a Excel después
+  // Guardar global
   window.auditoriosHoras = horasPorAuditorio;
   window.auditoriosSolicitudes = solicitudesPorAuditorio;
+  window.auditoriosOtros = { horas: horasOtros, solicitudes: solicitudesOtros };
 }
 
 
