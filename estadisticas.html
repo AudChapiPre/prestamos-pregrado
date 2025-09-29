@@ -344,6 +344,10 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
     window.addEventListener("DOMContentLoaded", cargarEstadisticasDesdeFirestore);
   </script>
 <script>
+
+  let solicitudesPorAuditorio = {};
+  let totalSolicitudes = 0;
+
     window.reiniciarEstadisticas = function () {
       const tabla = document.querySelector("#tablaEstadisticas tbody");
       tabla.innerHTML = `
@@ -449,8 +453,8 @@ for (let aud in mapaAuditoriosCeldas) {
   ws[celda] = { t: "n", v: valor };
 }
 
-// 🔹 Total de servicios (todas las solicitudes de auditorios) → C39
 ws["C39"] = { t: "n", v: totalSolicitudes };
+
 
         // === 4. Descargar archivo con los datos + estilos ===
         const blob = await workbook.outputAsync();
@@ -689,6 +693,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
   // Totales oficiales
   const totalHoras = auditoriosValidos.reduce((acc, a) => acc + horasPorAuditorio[a], 0);
   const totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
+totalSolicitudes = Object.values(solicitudesPorAuditorio).reduce((a, b) => a + b, 0);
 
   // Texto de totales
 let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
