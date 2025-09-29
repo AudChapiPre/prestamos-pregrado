@@ -573,32 +573,93 @@ function calcularHorasDesdeTexto(texto) {
 
 
 // Mostrar gráfica con Chart.js
-function mostrarGraficaAuditorios(auditorios, total) {
-    const ctx = document.getElementById("graficaAuditorios").getContext("2d");
-    const labels = Object.keys(auditorios);
-    const data = Object.values(auditorios);
+async function mostrarGraficaAuditorios(textoDocx) {
+    const lineas = textoDocx.split("\n");
+    let horasPorAuditorio = {};
+    let ultimaUbicacion = null;
 
+    for (let linea of lineas) {
+        linea = linea.trim();
+        if (!linea) continue;
+
+        // Detectar ubicación
+        let matchUbicacion = linea.match(/Ubicaci[oó6]n:\s*(.+)/i);
+        if (matchUbicacion) {
+            ultimaUbicacion = matchUbicacion[1].trim();
+            console.log("📍 Ubicación detectada:", ultimaUbicacion);
+            continue;
+        }
+
+        // Detectar horario (ejemplo: "de 8:00 a 12:00")
+        let matchHoras = linea.match(/de\s*(\d{1,2}:\d{2})\s*a\s*(\d{1,2}:\d{2})/i);
+        if (matchHoras) {
+            let inicio = matchHoras[1];
+            let fin = matchHoras[2];
+
+            let [hIni, mIni] = inicio.split(":").map(Number);
+            let [hFin, mFin] = fin.split(":").map(Number);
+
+            let horas = (hFin + mFin / 60) - (hIni + mIni / 60);
+            if (horas < 0) horas += 24; // Caso de cruce de medianoche
+
+            if (ultimaUbicacion) {
+                if (!horasPorAuditorio[ultimaUbicacion]) {
+                    horasPorAuditorio[ultimaUbicacion] = 0;
+                }
+                horasPorAuditorio[ultimaUbicacion] += horas;
+                console.log(`✅ Evento registrado -> ${ultimaUbicacion}: +${horas} horas`);
+            } else {
+                console.warn("⚠️ Horario detectado pero sin ubicación asignada:", linea);
+            }
+        }
+    }
+
+    // Calcular total
+    let totalHoras = Object.values(horasPorAuditorio).reduce((a, b) => a + b, 0);
+
+    console.log("📊 Horas por auditorio:", horasPorAuditorio);
+    console.log("🟢 Total horas auditorios:", totalHoras);
+
+    // Mostrar en HTML
+    document.getElementById("total-horas-auditorios").textContent =
+        `Total horas auditorios: ${totalHoras.toFixed(1)}`;
+
+    // Renderizar gráfica con Chart.js
+    let ctx = document.getElementById("grafica-auditorios").getContext("2d");
     new Chart(ctx, {
         type: "bar",
         data: {
-            labels: labels,
+            labels: Object.keys(horasPorAuditorio),
             datasets: [{
                 label: "Horas por auditorio",
-                data: data,
-                backgroundColor: "rgba(75, 192, 192, 0.6)"
+                data: Object.values(horasPorAuditorio).map(h => h.toFixed(1)),
+                backgroundColor: "rgba(75, 192, 192, 0.5)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                title: {
-                    display: true,
-                    text: `Total horas auditorios: ${total.toFixed(1)}`
+                legend: { position: "top" },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return `${ctx.dataset.label}: ${ctx.raw} h`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: "Horas" }
                 }
             }
         }
     });
 }
+
 
 // Si subieron el docx
 if (window.auditoriosHoras) {
