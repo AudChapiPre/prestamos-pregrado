@@ -345,8 +345,10 @@ console.log("✅ Estadísticas y préstamos listos para exportar");
   </script>
 <script>
 
-  let solicitudesPorAuditorio = {};
-  let totalSolicitudes = 0;
+let solicitudesPorAuditorio = {};
+let totalSolicitudes = 0;
+let horasPorAuditorio = {};
+let totalHoras = 0;
 
     window.reiniciarEstadisticas = function () {
       const tabla = document.querySelector("#tablaEstadisticas tbody");
@@ -450,10 +452,11 @@ async function exportarEstadisticasConPlantilla() {
 for (let aud in mapaAuditoriosCeldas) {
   const celda = mapaAuditoriosCeldas[aud];
   const valor = solicitudesPorAuditorio[aud] || 0;
-  ws[celda] = { t: "n", v: valor };
+  sheet.cell(celda).value(valor);  // ⬅️ usa sheet.cell
 }
 
-ws["C39"] = { t: "n", v: totalSolicitudes };
+// 🔹 Total de servicios (todas las solicitudes) → C39
+sheet.cell("C39").value(totalSolicitudes);
 
 
         // === 4. Descargar archivo con los datos + estilos ===
@@ -632,6 +635,9 @@ function normalizarAuditorio(nombre) {
 
 // Mostrar gráfica con Chart.js
 async function mostrarGraficaAuditorios(textoDocx) {
+  
+  
+  
   const lineas = textoDocx.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
   const horasPorAuditorio = {};
