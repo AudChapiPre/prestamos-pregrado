@@ -4,6 +4,7 @@
   <script src="https://unpkg.com/xlsx-populate/browser/xlsx-populate.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
 
 
@@ -557,16 +558,43 @@ function calcularHorasDesdeTexto(texto) {
 }
 
 
+const auditoriosValidos = [
+  "AZUL",
+  "ROJO",
+  "SALA SUSTENTACIONES 1",
+  "SALA SUSTENTACIONES 2",
+  "EXPOSICIONES A Y B",
+  "CINCUENTENARIO",
+  "HNO MARTIN",
+  "CONCEJO ACADEMICO",
+  "TEATRO",
+  "BAUSCH & LOMB"
+];
 
+// Inicializar Fuse.js para fuzzy matching
+const fuse = new Fuse(auditoriosValidos, {
+  includeScore: true,
+  threshold: 0.4 // mientras más bajo, más estricto (0.4 es un buen equilibrio)
+});
+
+function normalizarAuditorio(nombre) {
+  if (!nombre) return "SIN AUDITORIO";
+  nombre = nombre.toUpperCase().trim();
+  const result = fuse.search(nombre);
+  if (result.length > 0) {
+    return result[0].item; // el más parecido de la lista
+  }
+  return "OTRO"; // si no se parece a nada, lo manda a "OTRO"
+}
 
 
 
 // Mostrar gráfica con Chart.js
 async function mostrarGraficaAuditorios(textoDocx) {
-  let texto = typeof textoDocx === "string" ? textoDocx : (textoDocx?.value || String(textoDocx));
-  const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const lineas = textoDocx.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
   const horasPorAuditorio = {};
+  const solicitudesPorAuditorio = {};
 
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
@@ -577,7 +605,7 @@ async function mostrarGraficaAuditorios(textoDocx) {
       const inicioStr = matchHoras[1];
       const finStr = matchHoras[2];
 
-      // Buscar ubicación más cercana (hasta 6 líneas hacia atrás o adelante)
+      // Buscar ubicación cercana
       let ubic = null;
       for (let k = 1; k <= 6; k++) {
         const prev = lineas[i - k];
@@ -591,58 +619,67 @@ async function mostrarGraficaAuditorios(textoDocx) {
           if (mNext) { ubic = mNext[1].trim().toUpperCase(); break; }
         }
       }
-      if (!ubic) ubic = "SIN AUDITORIO";
+
+      // Normalizar con Fuse
+      ubic = normalizarAuditorio(ubic);
 
       // Calcular horas
-      const toMinutes = s => { const [h, m] = s.split(':').map(Number); return h*60 + m; };
+      const toMinutes = s => { const [h, m] = s.split(":").map(Number); return h*60 + m; };
       let diffMin = toMinutes(finStr) - toMinutes(inicioStr);
-      if (diffMin < 0) diffMin += 24 * 60;
+      if (diffMin < 0) diffMin += 24*60;
       const horas = Math.round((diffMin / 60) * 10) / 10;
 
-      // Sumar al auditorio correcto
+      // Sumar a horas y solicitudes
       horasPorAuditorio[ubic] = (horasPorAuditorio[ubic] || 0) + horas;
-      console.log(`✅ Evento: "${linea}" -> ${horas} h -> ${ubic}`);
+      solicitudesPorAuditorio[ubic] = (solicitudesPorAuditorio[ubic] || 0) + 1;
+
+      console.log(`✅ ${ubic}: +${horas}h (solicitud #${solicitudesPorAuditorio[ubic]})`);
     }
   }
 
-  // Calcular total
-  const totalHoras = Object.values(horasPorAuditorio).reduce((a, b) => a + b, 0);
-  console.table(horasPorAuditorio);
-  document.getElementById("total-horas-auditorios").textContent =
-    `Total horas auditorios: ${totalHoras.toFixed(1)}`;
+  const totalHoras = Object.values(horasPorAuditorio).reduce((a,b)=>a+b,0);
+  const totalSolicitudes = Object.values(solicitudesPorAuditorio).reduce((a,b)=>a+b,0);
 
-  // Dibujar gráfica con Chart.js
+  console.table(horasPorAuditorio);
+  console.table(solicitudesPorAuditorio);
+  console.log("🟢 Total horas:", totalHoras, " | 🟢 Total solicitudes:", totalSolicitudes);
+
+  // Mostrar en HTML
+  document.getElementById("total-horas-auditorios").textContent =
+    `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
+
+  // Gráfica de solicitudes
   const ctx = document.getElementById("grafica-auditorios").getContext("2d");
   if (window._chartAuditorios) window._chartAuditorios.destroy();
   window._chartAuditorios = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: Object.keys(horasPorAuditorio),
-      datasets: [{
-        label: "Horas por auditorio",
-        data: Object.values(horasPorAuditorio),
-        backgroundColor: "rgba(75,192,192,0.6)",
-        borderColor: "rgba(75,192,192,1)",
-        borderWidth: 1
-      }]
+      labels: Object.keys(solicitudesPorAuditorio),
+      datasets: [
+        {
+          label: "Solicitudes",
+          data: Object.values(solicitudesPorAuditorio),
+          backgroundColor: "rgba(153,102,255,0.6)"
+        },
+        {
+          label: "Horas",
+          data: Object.values(horasPorAuditorio),
+          backgroundColor: "rgba(75,192,192,0.6)"
+        }
+      ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false },
-        title: { display: true, text: `Total horas: ${totalHoras.toFixed(1)}` }
+        title: { display: true, text: "Auditorios - Solicitudes y Horas" }
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: "Horas" }
-        }
-      }
+      scales: { y: { beginAtZero: true } }
     }
   });
 
   // Guardar global para exportar a Excel después
   window.auditoriosHoras = horasPorAuditorio;
+  window.auditoriosSolicitudes = solicitudesPorAuditorio;
 }
 
 
