@@ -501,8 +501,7 @@ document.getElementById("archivoDocx").addEventListener("change", function (even
 function calcularHorasDesdeTexto(texto) {
     const lineas = texto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
 
-    // Nuevo regex: permite texto extra después de la hora final
-    // Ej: "de 7:00 a 21:00 o", "de 8:00 a 12:00 hrs"
+    // Regex que acepta texto extra después de la hora final
     const regexHoras = /(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})(?:\s*\w*)?/;
 
     let totalHoras = 0;
@@ -515,14 +514,12 @@ function calcularHorasDesdeTexto(texto) {
             const inicio = match[2];
             const fin = match[3];
 
-            // Convertir a formato ISO para crear Date válido
             const fechaISO = fecha.split("/").reverse().join("-");
             const inicioDate = new Date(`${fechaISO}T${inicio}:00`);
             const finDate = new Date(`${fechaISO}T${fin}:00`);
 
             if (!isNaN(inicioDate) && !isNaN(finDate)) {
                 const horas = (finDate - inicioDate) / (1000 * 60 * 60);
-                totalHoras += horas;
 
                 // Buscar ubicación en las siguientes 4 líneas
                 let ubicacion = "Sin auditorio";
@@ -534,13 +531,25 @@ function calcularHorasDesdeTexto(texto) {
                     }
                 }
 
+                // Sumar al total
+                totalHoras += horas;
                 auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
+
+                // 🔎 Log de depuración
+                console.log(`Evento encontrado: ${lineas[i]}`);
+                console.log(` → Inicio: ${inicio}, Fin: ${fin}, Horas: ${horas}`);
+                console.log(` → Ubicación detectada: ${ubicacion}`);
+                console.log("-----------------------------------");
+            } else {
+                console.warn("Fecha inválida en línea:", lineas[i]);
             }
         }
     }
 
+    console.log("Resumen final:", auditorios, "Total horas:", totalHoras);
     return { totalHoras, auditorios };
 }
+
 
 
 
