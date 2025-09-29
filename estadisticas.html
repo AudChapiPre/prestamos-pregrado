@@ -499,7 +499,9 @@ document.getElementById("archivoDocx").addEventListener("change", function (even
 
 // Parser de horarios
 function calcularHorasDesdeTexto(texto) {
-    const lineas = texto.split("\n");
+    const lineas = texto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+    // ejemplo: "Lun 01/09/2025, de 8:00 a 22:00"
     const regexHoras = /(\d{2}\/\d{2}\/\d{4}), de (\d{1,2}:\d{2}) a (\d{1,2}:\d{2})/;
 
     let totalHoras = 0;
@@ -520,10 +522,14 @@ function calcularHorasDesdeTexto(texto) {
                 const horas = (finDate - inicioDate) / (1000 * 60 * 60);
                 totalHoras += horas;
 
-                // Ubicación puede variar en tilde o errores → normalizamos
+                // Buscar ubicación en las siguientes 4 líneas
                 let ubicacion = "Sin auditorio";
-                if (lineas[i + 1] && lineas[i + 1].toLowerCase().includes("ubicac")) {
-                    ubicacion = lineas[i + 1].split(":")[1]?.trim() || "Sin auditorio";
+                for (let j = 1; j <= 4; j++) {
+                    const lineaUbic = lineas[i + j];
+                    if (lineaUbic && /ubicaci[óo6]n/i.test(lineaUbic)) {
+                        ubicacion = lineaUbic.split(":")[1]?.trim() || "Sin auditorio";
+                        break;
+                    }
                 }
 
                 auditorios[ubicacion] = (auditorios[ubicacion] || 0) + horas;
@@ -533,6 +539,7 @@ function calcularHorasDesdeTexto(texto) {
 
     return { totalHoras, auditorios };
 }
+
 
 // Mostrar gráfica con Chart.js
 function mostrarGraficaAuditorios(auditorios, total) {
