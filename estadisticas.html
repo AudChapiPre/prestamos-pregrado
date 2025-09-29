@@ -587,7 +587,9 @@ function normalizarAuditorio(nombre) {
   if (n.includes("SALAS DE EXPOSICION A Y B")) return "EXPOSICIONES A Y B";
   if (n.includes("AUDITORIO ROJO")) return "ROJO";
   if (n.includes("AUDITORIO AZUL")) return "AZUL";
-  if (n.includes("SALA DE JUNTAS") || n.includes("FUNDADORES")) return "CONCEJO ACADEMICO";
+  if (n.includes("SALA DE JUNTAS")) return "CONCEJO ACADEMICO";
+  if (n.includes("JUNTAS SIMULTANEAS")) return "CONCEJO ACADEMICO";
+  if (n.includes("JUNTAS") && n.includes("FUNDADORES")) return "CONCEJO ACADEMICO";
   if (n.includes("CINCUENTENARIO")) return "CINCUENTENARIO";
   if (n.includes("HNO") || n.includes("MARTIN")) return "HNO MARTIN";
   if (n.includes("TEATRO")) return "TEATRO";
@@ -666,11 +668,11 @@ async function mostrarGraficaAuditorios(textoDocx) {
   const totalSolicitudes = auditoriosValidos.reduce((acc, a) => acc + solicitudesPorAuditorio[a], 0);
 
   // Texto de totales
-  let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
-  if (solicitudesOtros > 0) {
-    totalTexto += ` ⚠️ Otros: ${solicitudesOtros} solicitudes (${horasOtros.toFixed(1)} h) [${nombresOtros.join(", ")}]`;
-  }
-  document.getElementById("total-horas-auditorios").textContent = totalTexto;
+let totalTexto = `Total solicitudes: ${totalSolicitudes} | Total horas: ${totalHoras.toFixed(1)}`;
+if (solicitudesOtros > 0) {
+  totalTexto += ` ⚠️ Otros: ${solicitudesOtros} solicitudes (${horasOtros.toFixed(1)} h)`;
+}
+document.getElementById("total-horas-auditorios").textContent = totalTexto;
 
   // Dibujar gráfica
   const ctx = document.getElementById("grafica-auditorios").getContext("2d");
