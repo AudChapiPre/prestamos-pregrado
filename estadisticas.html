@@ -434,7 +434,7 @@ async function exportarEstadisticasConPlantilla() {
         sheet.cell("C25").value(totalHorasOnescreen);
         sheet.cell("C26").value(totalHorasTV);
         sheet.cell("C27").value(totalHorasAnchor);
-
+       
         // 🔹 Auditorios → celdas en la plantilla
         const mapaAuditoriosCeldas = {
           "AZUL": "C30",
@@ -743,7 +743,7 @@ document.getElementById("total-horas-auditorios").textContent = totalTexto;
   window.auditoriosOtros = { horas: horasOtros, solicitudes: solicitudesOtros, nombres: nombresOtros };
 }
 
-
+ sheet.cell("C39").value(totalSolicitudes);
 
 // Si subieron el docx
 if (window.auditoriosHoras) {
