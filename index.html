@@ -46,7 +46,7 @@
   window.agregarPrestamo = async function () {
   const nombre = document.getElementById("nombre").value;
   const documento = document.getElementById("documento").value;
-  const tipoUsuario = document.getElementById("tipoUsuario").value;
+  let tipoUsuario = document.getElementById("tipoUsuario").value.trim();
   const facultad = document.getElementById("facultad").value;
   const salon = document.getElementById("salon").value;
   const horaEntrega = document.getElementById("horaEntrega").value;
