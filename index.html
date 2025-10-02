@@ -63,6 +63,18 @@
     return;
   }
 
+    // ✅ Validar tipoUsuario
+  const tiposValidos = ["administrativo", "docente", "estudiante"];
+  const normalizado = tipoUsuario.toLowerCase();
+
+  if (!tiposValidos.includes(normalizado)) {
+    alert("⚠️ Tipo de usuario inválido. Solo se permite: Administrativo, Docente o Estudiante.");
+    return;
+  }
+
+  // Normalizar para guardar (primera letra mayúscula, resto minúsculas)
+  tipoUsuario = normalizado.charAt(0).toUpperCase() + normalizado.slice(1);
+
   const fecha = new Date().toLocaleDateString("es-CO");
   const id = `${documento}`;
 
