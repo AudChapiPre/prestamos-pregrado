@@ -78,9 +78,9 @@ card.innerHTML = `
     <p><strong>Facultad:</strong> ${prestamo.facultad}</p>
     <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
     <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
-    <button class="btn-edit" onclick="editarPrestamo('${prestamo.id}')">Editar</button>
-    <button class="btn-return" onclick="marcarDevuelto('${prestamo.id}')">Devolver</button>
-    <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.id}')">Eliminar</button>
+    <button class="btn-edit" onclick="editarPrestamo('${prestamo.documento}')">Editar</button>
+    <button class="btn-return" onclick="marcarDevuelto('${prestamo.documento}')">Devolver</button>
+    <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.documento}')">Eliminar</button>
   </div>
 `;
 
@@ -153,41 +153,13 @@ mostrarPrestamosActivos(); // ✅ reemplazo correcto
   }
 };
 
-    window.editarPrestamo = async function(id) {
-  try {
-    const ref = doc(db, "prestamos", id);
-    const snap = await getDoc(ref);
+window.marcarDevuelto = async function(id) {
+  const ref = doc(db, "prestamos", id);
+  await updateDoc(ref, { devuelto: true });
+  cargarDatos(); // Recarga lista después de marcar como devuelto
+}
 
-    if (!snap.exists()) {
-      alert("El préstamo no existe.");
-      return;
-    }
 
-    const prestamo = snap.data();
-
-    // Rellenar el formulario
-    document.getElementById("documento").value = prestamo.documento || "";
-    document.getElementById("nombre").value = prestamo.nombre || "";
-    document.getElementById("tipoUsuario").value = prestamo.tipoUsuario || "";
-    document.getElementById("facultad").value = prestamo.facultad || "";
-    document.getElementById("salon").value = prestamo.salon || "";
-    document.getElementById("horaEntrega").value = prestamo.horaEntrega || "";
-    document.getElementById("horaDevolucion").value = prestamo.horaDevolucion || "";
-
-    // Marcar los checkboxes de equipos
-    const checkboxes = document.querySelectorAll("input[type='checkbox']");
-    checkboxes.forEach(cb => {
-      cb.checked = prestamo.equipos?.includes(cb.value) || false;
-    });
-
-    // Eliminar de Firestore para volver a guardar después con cambios
-    await deleteDoc(ref);
-    cargarDatos();
-
-  } catch (error) {
-    console.error("❌ Error al editar préstamo:", error);
-  }
-};
     window.agregarAlHistorial = async function(prestamo) {
   const id = `${prestamo.documento}_${prestamo.fecha}`;
   try {
