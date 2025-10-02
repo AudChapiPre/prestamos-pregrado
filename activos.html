@@ -156,28 +156,24 @@ mostrarPrestamosActivos(); // ✅ reemplazo correcto
 window.marcarDevuelto = async function(id) {
   try {
     const ref = doc(db, "prestamos", id);
-    // Verificar que exista
     const snap = await getDoc(ref);
+
     if (!snap.exists()) {
-      alert("No se encontró el préstamo con id: " + id);
+      alert("Préstamo no encontrado.");
       return;
     }
 
-    // Actualizar campo devuelto
+    // Actualizamos solo el estado
     await updateDoc(ref, { devuelto: true });
-    console.log(`✅ Préstamo ${id} marcado como devuelto`);
 
-    // Refrescar la vista correcta
-    if (typeof mostrarPrestamosActivos === "function") {
-      mostrarPrestamosActivos();
-    } else {
-      console.warn("mostrarPrestamosActivos() no encontrada; recarga manual necesaria");
-    }
+    console.log(`✅ Préstamo ${id} marcado como devuelto`);
+    mostrarPrestamosActivos(); // refresca la lista
   } catch (err) {
-    console.error("Error marcando devuelto:", err);
-    alert("Error al marcar como devuelto. Revisa la consola (F12).");
+    console.error("Error al devolver:", err);
+    alert("❌ No se pudo marcar como devuelto.");
   }
 };
+
 
 
 
