@@ -8,7 +8,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
         import {
-          getFirestore, collection, getDocs, getDoc, deleteDoc, setDoc, doc, addDoc
+          getFirestore, collection, getDocs, getDoc, deleteDoc, setDoc, doc, addDoc, updateDoc
         } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
     
         const firebaseConfig = {
@@ -154,10 +154,31 @@ mostrarPrestamosActivos(); // ✅ reemplazo correcto
 };
 
 window.marcarDevuelto = async function(id) {
-  const ref = doc(db, "prestamos", id);
-  await updateDoc(ref, { devuelto: true });
-  mostrarPrestamosActivos(); // en vez de cargarDatos()
+  try {
+    const ref = doc(db, "prestamos", id);
+    // Verificar que exista
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      alert("No se encontró el préstamo con id: " + id);
+      return;
+    }
+
+    // Actualizar campo devuelto
+    await updateDoc(ref, { devuelto: true });
+    console.log(`✅ Préstamo ${id} marcado como devuelto`);
+
+    // Refrescar la vista correcta
+    if (typeof mostrarPrestamosActivos === "function") {
+      mostrarPrestamosActivos();
+    } else {
+      console.warn("mostrarPrestamosActivos() no encontrada; recarga manual necesaria");
+    }
+  } catch (err) {
+    console.error("Error marcando devuelto:", err);
+    alert("Error al marcar como devuelto. Revisa la consola (F12).");
+  }
 };
+
 
 
     window.agregarAlHistorial = async function(prestamo) {
