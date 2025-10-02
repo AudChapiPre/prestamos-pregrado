@@ -59,25 +59,31 @@ debugLeerColeccionesPosibles();
           const card = document.createElement("div");
           card.className = "card prestamo-activo";
 
-          card.innerHTML = `
-            <div class="card-header">
-              <span>${prestamo.nombre || ""} - ${prestamo.documento || ""}</span>
-              <span>En préstamo</span>
-            </div>
-            <div class="card-body">
-              <p><strong>Tipo de Usuario:</strong> ${prestamo.tipoUsuario || ""}</p>
-              <p><strong>Facultad:</strong> ${prestamo.facultad || ""}</p>
-              <p><strong>Salón:</strong> ${prestamo.salon || ""}</p>
-              <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega || ""}</p>
-              <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion || ""}</p>
-              <p><strong>Equipos:</strong> ${(prestamo.equipos || []).join(", ")}</p>
-              
-              <button class="btn-delete" onclick="eliminarPrestamo('${docu.id}')">Eliminar</button>
-              <button onclick="editarPrestamo('${docu.id}')">Editar</button>
+card.innerHTML = `
+  <div class="card-header">
+    <div>
+      <h2 style="margin:0; font-size:1.5em;">${prestamo.salon}</h2>
+      <p style="margin:0; font-size:0.9em; color:#555;">
+        ${prestamo.equipos?.join(", ")}
+      </p>
+    </div>
+    <span style="font-weight:bold; color:${prestamo.devuelto ? 'green' : 'red'};">
+      ${prestamo.devuelto ? "Devuelto" : "En préstamo"}
+    </span>
+  </div>
+  <div class="card-body">
+    <p><strong>Nombre:</strong> ${prestamo.nombre}</p>
+    <p><strong>Documento:</strong> ${prestamo.documento}</p>
+    <p><strong>Tipo de Usuario:</strong> ${prestamo.tipoUsuario}</p>
+    <p><strong>Facultad:</strong> ${prestamo.facultad}</p>
+    <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
+    <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
+    <button class="btn-edit" onclick="editarPrestamo('${prestamo.id}')">Editar</button>
+    <button class="btn-return" onclick="marcarDevuelto('${prestamo.id}')">Devolver</button>
+    <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.id}')">Eliminar</button>
+  </div>
+`;
 
-
-            </div>
-          `;
 
           card.addEventListener("click", () => {
             card.classList.toggle("expanded");
@@ -306,6 +312,9 @@ window.cerrarModal = function() {
     window.onload = mostrarPrestamosActivos;
       </script>
     <style>
+    
+
+
       table {
   width: 100%;
   overflow-x: auto;
@@ -373,17 +382,20 @@ window.cerrarModal = function() {
         .card:hover {
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
-        .card.expanded {
-            background: #f9f9f9;
+        .card.expanded .card-body {
+          max-height: 500px; /* suficiente para el contenido */
+          opacity: 1;
         }
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .card-body {
-            display: none;
-            margin-top: 10px;
+       .card-body {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.4s ease, opacity 0.4s ease;
+          opacity: 0;
         }
         .card.expanded .card-body {
             display: block;
