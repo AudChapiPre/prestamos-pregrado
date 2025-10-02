@@ -85,11 +85,28 @@
   await setDoc(doc(db, "prestamos", id), prestamo);
 
   // ✅ Guardar usuario si no existe aún
-  const usuarioRef = doc(db, "usuarios", documento);
-  const usuarioSnap = await getDoc(usuarioRef);
-  if (!usuarioSnap.exists()) {
-    await setDoc(usuarioRef, { nombre, documento, tipoUsuario, facultad });
+const usuarioRef = doc(db, "usuarios", documento);
+const usuarioSnap = await getDoc(usuarioRef);
+
+if (!usuarioSnap.exists()) {
+  // 🔹 Si no existe, lo creamos
+  await setDoc(usuarioRef, { nombre, documento, tipoUsuario, facultad });
+} else {
+  // 🔹 Si existe, revisamos campo por campo
+  const datosActuales = usuarioSnap.data();
+  let cambios = {};
+
+  if (nombre && nombre !== datosActuales.nombre) cambios.nombre = nombre;
+  if (tipoUsuario && tipoUsuario !== datosActuales.tipoUsuario) cambios.tipoUsuario = tipoUsuario;
+  if (facultad && facultad !== datosActuales.facultad) cambios.facultad = facultad;
+
+  // Si hay cambios, actualizamos
+  if (Object.keys(cambios).length > 0) {
+    await updateDoc(usuarioRef, cambios);
+    console.log(`✅ Usuario ${documento} actualizado:`, cambios);
   }
+}
+
 
   alert("Préstamo registrado correctamente.");
   // Limpiar formulario
