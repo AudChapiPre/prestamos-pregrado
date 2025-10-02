@@ -156,8 +156,8 @@ mostrarPrestamosActivos(); // ✅ reemplazo correcto
 window.marcarDevuelto = async function(id) {
   const ref = doc(db, "prestamos", id);
   await updateDoc(ref, { devuelto: true });
-  cargarDatos(); // Recarga lista después de marcar como devuelto
-}
+  mostrarPrestamosActivos(); // en vez de cargarDatos()
+};
 
 
     window.agregarAlHistorial = async function(prestamo) {
@@ -178,7 +178,7 @@ window.editarPrestamo = async function(id) {
   }
 
   const prestamo = snap.data();
-  let equiposDisponibles = ["HDMI", "CONTROL VB", "PORTATIL LENOVO", "PORTATIL DELL", "CARGADOR", "ANCHOR"];
+  let equiposDisponibles = ["HDMI (TV)", "HDMI (ONESCREEN)", "CONTROL VB", "HDMI (VIDEOBEAM)", "PORTATIL LENOVO", "ANCHOR"];
 
   // Modal
   let modal = document.createElement("div");
