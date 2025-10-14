@@ -43,14 +43,40 @@
     }
   };
 
+window.agregarSalon = function () {
+  const contenedor = document.getElementById("salones-container");
+  const nuevo = document.createElement("div");
+  nuevo.className = "salon-item";
+  nuevo.innerHTML = `
+    <input type="text" class="salon" placeholder="Salón (ej: 301P)">
+    <label>Hora entrega:</label>
+    <input type="time" class="horaEntrega">
+    <label>Hora devolución:</label>
+    <input type="time" class="horaDevolucion">
+    <button type="button" onclick="this.parentElement.remove()">❌</button>
+  `;
+  contenedor.appendChild(nuevo);
+};
+
 window.agregarPrestamo = async function () {
   const nombre = document.getElementById("nombre").value;
   const documento = document.getElementById("documento").value;
   let tipoUsuario = document.getElementById("tipoUsuario").value.trim();
   const facultad = document.getElementById("facultad").value;
-  const salon = document.getElementById("salon").value;
-  const horaEntrega = document.getElementById("horaEntrega").value;
-  const horaDevolucion = document.getElementById("horaDevolucion").value;
+const salones = [];
+document.querySelectorAll("#salones-container .salon-item").forEach(div => {
+  const nombreSalon = div.querySelector(".salon").value.trim();
+  const horaEntrega = div.querySelector(".horaEntrega").value;
+  const horaDevolucion = div.querySelector(".horaDevolucion").value;
+  if (nombreSalon && horaEntrega && horaDevolucion) {
+    salones.push({ nombre: nombreSalon, horaEntrega, horaDevolucion });
+  }
+});
+
+if (salones.length === 0) {
+  alert("Por favor, agregue al menos un salón con horario.");
+  return;
+}
 
   // 🧮 Leer las cantidades
   const cantidades = document.querySelectorAll(".cantidad-equipo");
@@ -83,18 +109,17 @@ window.agregarPrestamo = async function () {
   const fecha = new Date().toLocaleDateString("es-CO");
   const id = `${documento}`;
 
-  const prestamo = {
-    nombre,
-    documento,
-    tipoUsuario,
-    facultad,
-    salon,
-    horaEntrega,
-    horaDevolucion,
-    equipos, // ahora es un array de objetos { nombre, cantidad }
-    devuelto: false,
-    fecha
-  };
+const prestamo = {
+  nombre,
+  documento,
+  tipoUsuario,
+  facultad,
+  salones, // 👈 nuevo arreglo con varios salones
+  equipos,
+  devuelto: false,
+  fecha
+};
+
 
   // 🔥 Guardar préstamo
   await setDoc(doc(db, "prestamos", id), prestamo);
@@ -308,6 +333,27 @@ window.agregarPrestamo = async function () {
   padding: 5px;
   text-align: center;
 }
+.salon-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.salon-item input[type="text"] {
+  width: 120px;
+}
+.salon-item input[type="time"] {
+  width: 110px;
+}
+.salon-item button {
+  background: red;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
 
     </style>
 </head>
@@ -350,10 +396,21 @@ window.agregarPrestamo = async function () {
         <input type="text" id="nombre" placeholder="Nombre de la persona">
         <input type="text" id="tipoUsuario" placeholder="Tipo de usuario (Docente, Administrativo, Estudiante, etc.)">
         <input type="text" id="facultad" placeholder="Facultad">
-        <input type="text" id="salon" placeholder="Salón de uso">
-        <input type="time" id="horaEntrega" placeholder="Hora de entrega">
-        <input type="time" id="horaDevolucion" placeholder="Hora estimada de devolución">
-                
+
+<fieldset>
+  <legend>Salones y Horarios</legend>
+  <div id="salones-container">
+    <div class="salon-item">
+      <input type="text" class="salon" placeholder="Salón (ej: 301P)">
+      <label>Hora entrega:</label>
+      <input type="time" class="horaEntrega">
+      <label>Hora devolución:</label>
+      <input type="time" class="horaDevolucion">
+    </div>
+  </div>
+  <button type="button" onclick="agregarSalon()">+ Agregar otro salón</button>
+</fieldset>
+       
         <fieldset>
           <legend>Equipo Prestado</legend>
           <div class="checkbox-container">
@@ -472,9 +529,12 @@ async function cargarDatos() {
       <div class="card-body">
         <p><strong>Tipo de Usuario:</strong> ${prestamo.tipoUsuario}</p>
         <p><strong>Facultad:</strong> ${prestamo.facultad}</p>
-        <p><strong>Salón:</strong> ${prestamo.salon}</p>
-        <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
-        <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
+<p><strong>Salones:</strong> ${
+  Array.isArray(prestamo.salones)
+    ? prestamo.salones.map(s => `${s.nombre} (${s.horaEntrega} → ${s.horaDevolucion})`).join(", ")
+    : prestamo.salon || "No registrado"
+}</p>
+
 <p><strong>Equipos:</strong> ${
   Array.isArray(prestamo.equipos)
     ? prestamo.equipos.map(e => {
