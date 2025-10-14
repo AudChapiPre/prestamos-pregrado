@@ -43,7 +43,7 @@
     }
   };
 
-  window.agregarPrestamo = async function () {
+window.agregarPrestamo = async function () {
   const nombre = document.getElementById("nombre").value;
   const documento = document.getElementById("documento").value;
   let tipoUsuario = document.getElementById("tipoUsuario").value.trim();
@@ -51,28 +51,33 @@
   const salon = document.getElementById("salon").value;
   const horaEntrega = document.getElementById("horaEntrega").value;
   const horaDevolucion = document.getElementById("horaDevolucion").value;
-  
 
-  const checkboxes = document.querySelectorAll("input[type='checkbox']:checked");
-  let equipos = Array.from(checkboxes).map(cb => cb.value);
+  // 🧮 Leer las cantidades
+  const cantidades = document.querySelectorAll(".cantidad-equipo");
+  let equipos = [];
+  cantidades.forEach(input => {
+    const cantidad = parseInt(input.value);
+    if (cantidad > 0) {
+      equipos.push({ nombre: input.dataset.equipo, cantidad });
+    }
+  });
+
+  // Campo "otros"
   const otros = document.getElementById("otros").value.trim();
-  if (otros) equipos.push(otros);
+  if (otros) equipos.push({ nombre: otros, cantidad: 1 });
 
   if (!nombre || !documento || !facultad || !salon || !horaEntrega || !horaDevolucion || equipos.length === 0) {
-    alert("Por favor, complete todos los campos.");
+    alert("Por favor, complete todos los campos y agregue al menos un equipo.");
     return;
   }
 
-    // ✅ Validar tipoUsuario
+  // Validar tipo de usuario
   const tiposValidos = ["administrativo", "docente", "estudiante"];
   const normalizado = tipoUsuario.toLowerCase();
-
   if (!tiposValidos.includes(normalizado)) {
     alert("⚠️ Tipo de usuario inválido. Solo se permite: Administrativo, Docente o Estudiante.");
     return;
   }
-
-  // Normalizar para guardar (primera letra mayúscula, resto minúsculas)
   tipoUsuario = normalizado.charAt(0).toUpperCase() + normalizado.slice(1);
 
   const fecha = new Date().toLocaleDateString("es-CO");
@@ -86,57 +91,40 @@
     salon,
     horaEntrega,
     horaDevolucion,
-    equipos,
+    equipos, // ahora es un array de objetos { nombre, cantidad }
     devuelto: false,
     fecha
   };
 
-
-
-  // ✅ Guardar préstamo en Firestore
+  // 🔥 Guardar préstamo
   await setDoc(doc(db, "prestamos", id), prestamo);
 
-  // ✅ Guardar usuario si no existe aún
-const usuarioRef = doc(db, "usuarios", documento);
-const usuarioSnap = await getDoc(usuarioRef);
+  // 🧾 Guardar usuario si no existe o actualizar datos
+  const usuarioRef = doc(db, "usuarios", documento);
+  const usuarioSnap = await getDoc(usuarioRef);
 
-if (!usuarioSnap.exists()) {
-  // 🔹 Si no existe, lo creamos
-  await setDoc(usuarioRef, { nombre, documento, tipoUsuario, facultad });
-} else {
-  // 🔹 Si existe, revisamos campo por campo
-  const datosActuales = usuarioSnap.data();
-  let cambios = {};
-
-  if (nombre && nombre !== datosActuales.nombre) cambios.nombre = nombre;
-  if (tipoUsuario && tipoUsuario !== datosActuales.tipoUsuario) cambios.tipoUsuario = tipoUsuario;
-  if (facultad && facultad !== datosActuales.facultad) cambios.facultad = facultad;
-
-  // Si hay cambios, actualizamos
-  if (Object.keys(cambios).length > 0) {
-    await updateDoc(usuarioRef, cambios);
-    console.log(`✅ Usuario ${documento} actualizado:`, cambios);
+  if (!usuarioSnap.exists()) {
+    await setDoc(usuarioRef, { nombre, documento, tipoUsuario, facultad });
+  } else {
+    const datosActuales = usuarioSnap.data();
+    let cambios = {};
+    if (nombre && nombre !== datosActuales.nombre) cambios.nombre = nombre;
+    if (tipoUsuario && tipoUsuario !== datosActuales.tipoUsuario) cambios.tipoUsuario = tipoUsuario;
+    if (facultad && facultad !== datosActuales.facultad) cambios.facultad = facultad;
+    if (Object.keys(cambios).length > 0) await updateDoc(usuarioRef, cambios);
   }
-}
 
+  alert("✅ Préstamo registrado correctamente.");
 
-  alert("Préstamo registrado correctamente.");
   // Limpiar formulario
-document.getElementById("documento").value = "";
-document.getElementById("nombre").value = "";
-document.getElementById("tipoUsuario").value = "";
-document.getElementById("facultad").value = "";
-document.getElementById("salon").value = "";
-document.getElementById("horaEntrega").value = "";
-document.getElementById("horaDevolucion").value = "";
-document.getElementById("otros").value = "";
+  ["documento", "nombre", "tipoUsuario", "facultad", "salon", "horaEntrega", "horaDevolucion", "otros"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.querySelectorAll(".cantidad-equipo").forEach(input => input.value = 0);
 
-// Limpiar todos los checkboxes
-document.querySelectorAll("input[type='checkbox']").forEach(cb => cb.checked = false);
+  if (typeof cargarDatos === "function") cargarDatos();
+};
 
-// Recargar vista si quieres actualizar lista
-if (typeof cargarDatos === "function") cargarDatos();
-}
 
         window.firestore = { db, getFirestore, collection, doc, getDocs, getDoc, setDoc };
       </script>
@@ -309,6 +297,18 @@ if (typeof cargarDatos === "function") cargarDatos();
     margin-bottom: 6px;
   }
 }
+.checkbox-container label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 250px;
+}
+.checkbox-container input[type="number"] {
+  width: 60px;
+  padding: 5px;
+  text-align: center;
+}
+
     </style>
 </head>
 <body onload="cargarDatos()">
@@ -351,19 +351,38 @@ if (typeof cargarDatos === "function") cargarDatos();
         <input type="text" id="salon" placeholder="Salón de uso">
         <input type="time" id="horaEntrega" placeholder="Hora de entrega">
         <input type="time" id="horaDevolucion" placeholder="Hora estimada de devolución">
-        
+                
         <fieldset>
-           <legend>Equipo Prestado</legend>
-              <div class="checkbox-container">
-                      <label><input type="checkbox" value="HDMI (TV)"> HDMI (TV)</label>
-                      <label><input type="checkbox" value="HDMI (ONESCREEN)"> HDMI (ONESCREEN)</label>
-                      <label><input type="checkbox" value="CONTROL VB"> CONTROL (Videobeam)</label>
-                      <label><input type="checkbox" value="HDMI (VIDEOBEAM)"> HDMI (Videobeam)</label>
-                      <label><input type="checkbox" value="PORTATIL LENOVO"> PORTATIL LENOVO</label>
-                      <label><input type="checkbox" value="ANCHOR"> ANCHOR</label>
-             </div>
-            <input type="text" id="otros" placeholder="Otros equipos">
+          <legend>Equipo Prestado</legend>
+          <div class="checkbox-container">
+            <label>
+              HDMI (TV)
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="HDMI (TV)">
+            </label>
+            <label>
+              HDMI (ONESCREEN)
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="HDMI (ONESCREEN)">
+            </label>
+            <label>
+              CONTROL (Videobeam)
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="CONTROL VB">
+            </label>
+            <label>
+              HDMI (Videobeam)
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="HDMI (VIDEOBEAM)">
+            </label>
+            <label>
+              PORTÁTIL LENOVO
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="PORTATIL LENOVO">
+            </label>
+            <label>
+              ANCHOR
+              <input type="number" min="0" value="0" class="cantidad-equipo" data-equipo="ANCHOR">
+            </label>
+          </div>
+          <input type="text" id="otros" placeholder="Otros equipos">
         </fieldset>
+
         
         <button onclick="agregarPrestamo()">Agregar</button>
  
@@ -454,7 +473,8 @@ async function cargarDatos() {
         <p><strong>Salón:</strong> ${prestamo.salon}</p>
         <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
         <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
-        <p><strong>Equipos:</strong> ${prestamo.equipos?.join(", ")}</p>
+        <p><strong>Equipos:</strong> ${prestamo.equipos?.map(e => `${e.nombre} (x${e.cantidad})`).join(", ")}</p>
+
         <button class="btn-edit" onclick="editarPrestamo('${prestamo.id}')">Editar</button>
         <button class="btn-return" onclick="marcarDevuelto('${prestamo.id}')">Devolver</button>
         <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.id}')">Eliminar</button>

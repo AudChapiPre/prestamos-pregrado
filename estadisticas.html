@@ -6,9 +6,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
-
-
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Estadísticas de Préstamos</title>
@@ -269,11 +266,20 @@ window.exportarEstadisticas = exportarEstadisticas;
   
         const horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
   
-        if ((p.equipos || []).includes("HDMI (TV)")) grupo.horasHDMITV += horasNetas;
-        if ((p.equipos || []).includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasNetas;
-        if ((p.equipos || []).includes("CONTROL VB")) grupo.horasVB += horasNetas;
-        if ((p.equipos || []).some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
-        if ((p.equipos || []).includes("ANCHOR")) grupo.horasAnchors += horasNetas;
+// ✅ Nuevo cálculo compatible con objetos {nombre, cantidad}
+(p.equipos || []).forEach(eq => {
+  // Si los equipos vienen como string viejo (casos antiguos)
+  const nombre = typeof eq === "string" ? eq.toUpperCase() : (eq.nombre || "").toUpperCase();
+  const cantidad = typeof eq === "string" ? 1 : (eq.cantidad || 1);
+  const horasTotales = horasNetas * cantidad;
+
+  if (nombre.includes("HDMI (TV)")) grupo.horasHDMITV += horasTotales;
+  if (nombre.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasTotales;
+  if (nombre.includes("CONTROL VB")) grupo.horasVB += horasTotales;
+  if (nombre.includes("PORTATIL")) grupo.horasPortatiles += horasTotales;
+  if (nombre.includes("ANCHOR")) grupo.horasAnchors += horasTotales;
+});
+
       });
   
       // Renderizar tabla
