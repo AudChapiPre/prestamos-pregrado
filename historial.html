@@ -50,38 +50,68 @@ window.borrarHistorialFirestore = async function () {
 
         
         // Leer historial desde Firestore
-        async function cargarHistorial() {
-          const tabla = document.getElementById("historialPrestamos");
-          tabla.innerHTML = "";
-        
-          const snapshot = await getDocs(collection(db, "historial"));
-          const prestamos = [];
-        
-          snapshot.forEach(doc => {
-            const p = doc.data();
-            prestamos.push(p);
-          });
-        
-          // Orden inverso (del más reciente al más antiguo)
-          prestamos.reverse().forEach(p => {
-            const row = `<tr>
-              <td>${p.fecha || "N/A"}</td>
-              <td>${p.nombre}</td>
-              <td>${p.documento}</td>
-              <td>${p.tipoUsuario}</td>
-              <td>${p.facultad}</td>
-              <td>${p.salon}</td>
-              <td>${p.horaEntrega}</td>
-              <td>${p.horaDevolucion}</td>
-              <td>${(p.equipos || []).join(" - ")}</td>
-              <td>${calcularHorasNetas(p.horaEntrega, p.horaDevolucion)}</td>
-            </tr>`;
-            tabla.innerHTML += row;
-          });
-        
-          // Guardar copia local en memoria para exportación
-          window.historialFire = prestamos;
-        }
+async function cargarHistorial() {
+  const tabla = document.getElementById("historialPrestamos");
+  tabla.innerHTML = "";
+
+  const snapshot = await getDocs(collection(db, "historial"));
+  const prestamos = [];
+
+  snapshot.forEach(doc => prestamos.push(doc.data()));
+  prestamos.reverse();
+
+  prestamos.forEach(p => {
+    // 🧩 Compatibilidad con formato nuevo
+    const salones = Array.isArray(p.salones)
+      ? p.salones.map(s => s.nombre || "Sin nombre").join(" / ")
+      : (p.salon || "N/A");
+
+    const horaEntrega = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaEntrega || "?").join(", ")
+      : (p.horaEntrega || "N/A");
+
+    const horaDevolucion = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaDevolucion || "?").join(", ")
+      : (p.horaDevolucion || "N/A");
+
+    const equipos = Array.isArray(p.equipos)
+      ? p.equipos
+          .map(e => {
+            if (typeof e === "string") return e;
+            if (e?.nombre) return `${e.nombre}${e.cantidad ? ` (x${e.cantidad})` : ""}`;
+            return "Desconocido";
+          })
+          .join(" - ")
+      : "N/A";
+
+    // 🕒 Calcular horas netas (tomando el primer salón válido)
+    let horasNetas = 0;
+    if (Array.isArray(p.salones) && p.salones.length > 0) {
+      const s = p.salones[0];
+      horasNetas = calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+    } else {
+      horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+    }
+
+    const row = `
+      <tr>
+        <td>${p.fecha || "N/A"}</td>
+        <td>${p.nombre || "N/A"}</td>
+        <td>${p.documento || "N/A"}</td>
+        <td>${p.tipoUsuario || "N/A"}</td>
+        <td>${p.facultad || "N/A"}</td>
+        <td>${salones}</td>
+        <td>${horaEntrega}</td>
+        <td>${horaDevolucion}</td>
+        <td>${equipos}</td>
+        <td>${horasNetas}</td>
+      </tr>`;
+    tabla.innerHTML += row;
+  });
+
+  window.historialFire = prestamos;
+}
+
         
         window.filtrarHistorial = function () {
           let filtro = document.getElementById("busqueda").value.toLowerCase();
