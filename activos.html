@@ -101,8 +101,14 @@ card.innerHTML = `
     <p><strong>Documento:</strong> ${prestamo.documento}</p>
     <p><strong>Tipo de Usuario:</strong> ${prestamo.tipoUsuario}</p>
     <p><strong>Facultad:</strong> ${prestamo.facultad}</p>
-    <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
-    <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
+<p><strong>Salones:</strong> ${
+  Array.isArray(prestamo.salones)
+    ? prestamo.salones
+        .map(s => `${s.nombre || "?"} (${s.horaEntrega || "?"} → ${s.horaDevolucion || "?"})`)
+        .join(", ")
+    : `${prestamo.salon || "?"} (${prestamo.horaEntrega || "?"} → ${prestamo.horaDevolucion || "?"})`
+}</p>
+
     <button class="btn-edit" onclick="editarPrestamo('${prestamo.documento}')">Editar</button>
    
     <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.documento}')">Eliminar</button>
