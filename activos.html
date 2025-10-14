@@ -127,7 +127,7 @@ card.innerHTML = `
       }
     }
 
-    window.eliminarPrestamo = async function(id) {
+window.eliminarPrestamo = async function(id) {
   try {
     // Obtener el préstamo desde Firestore
     const ref = doc(db, "prestamos", id);
@@ -140,63 +140,43 @@ card.innerHTML = `
 
     const prestamoEliminado = snap.data();
 
-let horasNetas = 0;
-let horaEntrega = 0;
+    // 🔹 Calcular horas netas (compatible con varios salones)
+    let horasNetas = 0;
+    let horaEntrega = 0;
 
-// Si es formato nuevo con varios salones
-if (Array.isArray(prestamoEliminado.salones) && prestamoEliminado.salones.length > 0) {
-  prestamoEliminado.salones.forEach(salon => {
-    if (salon.horaEntrega && salon.horaDevolucion) {
-      horasNetas += parseFloat(calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion));
-      horaEntrega = parseInt(salon.horaEntrega.split(":")[0]);
-    }
-  });
-} else if (prestamoEliminado.horaEntrega && prestamoEliminado.horaDevolucion) {
-  // Compatibilidad con formato antiguo
-  horasNetas = parseFloat(calcularHorasNetas(prestamoEliminado.horaEntrega, prestamoEliminado.horaDevolucion));
-  horaEntrega = parseInt(prestamoEliminado.horaEntrega.split(":")[0]);
-}
-
-const tipoUsuario = prestamoEliminado.tipoUsuario ? prestamoEliminado.tipoUsuario.toLowerCase() : "desconocido";
-
-    // Estadísticas aún en localStorage
-    let estadisticas = JSON.parse(localStorage.getItem("estadisticas")) || {
-      docentes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
-      estudiantes: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 },
-      administrativos: { mañana: 0, tarde: 0, horasHDMI: 0, horasPortatiles: 0, horasAnchors: 0 }
-    };
-
-    const grupo = estadisticas[tipoUsuario];
-    if (grupo) {
-      if (horaEntrega < 12) grupo.mañana++;
-      else grupo.tarde++;
-
-        if (prestamoEliminado.equipos.includes("HDMI (TV)")) grupo.horasHDMITV += horasNetas;
-        if (prestamoEliminado.equipos.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasNetas;
-        if (prestamoEliminado.equipos.includes("CONTROL VB")) grupo.horasVB += horasNetas;
-        if (prestamoEliminado.equipos.some(e => e.includes("PORTATIL"))) grupo.horasPortatiles += horasNetas;
-        if (prestamoEliminado.equipos.includes("ANCHOR")) grupo.horasAnchors += horasNetas;
-
+    if (Array.isArray(prestamoEliminado.salones) && prestamoEliminado.salones.length > 0) {
+      prestamoEliminado.salones.forEach(salon => {
+        if (salon.horaEntrega && salon.horaDevolucion) {
+          horasNetas += parseFloat(calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion));
+          horaEntrega = parseInt(salon.horaEntrega.split(":")[0]);
+        }
+      });
+    } else if (prestamoEliminado.horaEntrega && prestamoEliminado.horaDevolucion) {
+      horasNetas = parseFloat(calcularHorasNetas(prestamoEliminado.horaEntrega, prestamoEliminado.horaDevolucion));
+      horaEntrega = parseInt(prestamoEliminado.horaEntrega.split(":")[0]);
     }
 
-    // Guardar estadísticas en local
-    localStorage.setItem("estadisticas", JSON.stringify(estadisticas));
+    const tipoUsuario = (prestamoEliminado.tipoUsuario || "").toLowerCase();
 
-    // Guardar en historial (en Firestore)
-    await addDoc(collection(db, "historial"), prestamoEliminado);
+    // 🔹 Guardar en historial (en Firestore)
+    await addDoc(collection(db, "historial"), {
+      ...prestamoEliminado,
+      horasTotales: horasNetas,
+      fechaFin: new Date().toISOString()
+    });
 
+    // 🔹 Eliminar del activo
     await deleteDoc(ref);
-console.log("✅ Préstamo eliminado:", id);
-console.log("📈 Estadísticas actualizadas:", estadisticas);
 
-// Refrescar lista
-mostrarPrestamosActivos(); // ✅ reemplazo correcto
-
+    alert("✅ Préstamo enviado al historial y eliminado correctamente.");
+    mostrarPrestamosActivos();
 
   } catch (error) {
     console.error("❌ Error eliminando el préstamo:", error);
+    alert("❌ Error eliminando el préstamo: " + error.message);
   }
 };
+
 
 window.marcarDevuelto = async function(id) {
   try {
