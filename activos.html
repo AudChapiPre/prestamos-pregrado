@@ -134,10 +134,24 @@ card.innerHTML = `
 
     const prestamoEliminado = snap.data();
 
-    // Calcular horas netas
-    const horasNetas = parseFloat(calcularHorasNetas(prestamoEliminado.horaEntrega, prestamoEliminado.horaDevolucion));
-    const horaEntrega = parseInt(prestamoEliminado.horaEntrega.split(":")[0]);
-    const tipoUsuario = prestamoEliminado.tipoUsuario.toLowerCase();
+let horasNetas = 0;
+let horaEntrega = 0;
+
+// Si es formato nuevo con varios salones
+if (Array.isArray(prestamoEliminado.salones) && prestamoEliminado.salones.length > 0) {
+  prestamoEliminado.salones.forEach(salon => {
+    if (salon.horaEntrega && salon.horaDevolucion) {
+      horasNetas += parseFloat(calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion));
+      horaEntrega = parseInt(salon.horaEntrega.split(":")[0]);
+    }
+  });
+} else if (prestamoEliminado.horaEntrega && prestamoEliminado.horaDevolucion) {
+  // Compatibilidad con formato antiguo
+  horasNetas = parseFloat(calcularHorasNetas(prestamoEliminado.horaEntrega, prestamoEliminado.horaDevolucion));
+  horaEntrega = parseInt(prestamoEliminado.horaEntrega.split(":")[0]);
+}
+
+const tipoUsuario = prestamoEliminado.tipoUsuario ? prestamoEliminado.tipoUsuario.toLowerCase() : "desconocido";
 
     // Estadísticas aún en localStorage
     let estadisticas = JSON.parse(localStorage.getItem("estadisticas")) || {
