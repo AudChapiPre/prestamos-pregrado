@@ -63,9 +63,20 @@ card.innerHTML = `
   <div class="card-header">
     <div>
       <h2 style="margin:0; font-size:1.5em;">${prestamo.salon}</h2>
-      <p style="margin:0; font-size:0.9em; color:#555;">
-        ${prestamo.equipos?.join(", ")}
-      </p>
+<p style="margin:0; font-size:0.9em; color:#555;">
+  ${
+    Array.isArray(prestamo.equipos)
+      ? prestamo.equipos.map(e => {
+          if (!e) return "";
+          if (typeof e === "string") return e; // compatibilidad con préstamos antiguos
+          const nombre = e.nombre || e.equipo || "Desconocido";
+          const cantidad = e.cantidad || 1;
+          return `${nombre} (x${cantidad})`;
+        }).join(", ")
+      : "Sin equipos"
+  }
+</p>
+
     </div>
     <span style="font-weight:bold; color:${prestamo.devuelto ? 'green' : 'red'};">
       ${prestamo.devuelto ? "Devuelto" : "En préstamo"}
