@@ -62,7 +62,21 @@ debugLeerColeccionesPosibles();
 card.innerHTML = `
   <div class="card-header">
     <div>
-      <h2 style="margin:0; font-size:1.5em;">${prestamo.salon}</h2>
+<h2 style="margin:0; font-size:1.5em;">${
+  // Mostrar el primer salón si existe la versión nueva con array,
+  // si es antiguo, usa prestamo.salon
+  Array.isArray(prestamo.salones) && prestamo.salones.length > 0
+    ? prestamo.salones.map(s => s.nombre || "Sin nombre").join(" / ")
+    : (prestamo.salon || "Sin salón")
+}</h2>
+<p style="margin:0; font-size:0.9em; color:#555;">
+  ${
+    Array.isArray(prestamo.salones)
+      ? prestamo.salones.map(s => `${s.nombre || "sin"} (${s.horaEntrega || "?"} → ${s.horaDevolucion || "?"})`).join(", ")
+      : (prestamo.salon ? `${prestamo.salon} (${prestamo.horaEntrega || "?"} → ${prestamo.horaDevolucion || "?"})` : "Sin horario")
+  }
+</p>
+
 <p style="margin:0; font-size:0.9em; color:#555;">
   ${
     Array.isArray(prestamo.equipos)
