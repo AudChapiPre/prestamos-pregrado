@@ -231,116 +231,136 @@
 
 
 // Exponer al ámbito global
+// Exponer al ámbito global
 window.exportarEstadisticas = exportarEstadisticas;
 
-    async function cargarEstadisticasDesdeFirestore() {
-      const estadisticas = {
-          docentes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
-          estudiantes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
-          administrativos: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 }
-        };
+async function cargarEstadisticasDesdeFirestore() {
+  const estadisticas = {
+    docentes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
+    estudiantes: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 },
+    administrativos: { mañana: 0, tarde: 0, horasHDMITV: 0, horasHDMIOneScreen: 0, horasVB: 0, horasPortatiles: 0, horasAnchors: 0 }
+  };
 
-  
-      const tipoMap = {
-        docente: "docentes",
-        estudiante: "estudiantes",
-        administrativo: "administrativos"
-      };
-  
-      const snapshot = await getDocs(collection(db, "historial"));
-      snapshot.forEach(doc => {
-        const p = doc.data();
-        const tipoOriginal = (p.tipoUsuario || "").toLowerCase().trim();
-        const tipo = tipoMap[tipoOriginal];
-  
-        if (!tipo || !estadisticas[tipo]) {
-          console.warn("❌ Tipo no reconocido:", tipoOriginal);
-          return;
+  // 🔹 Mapa de equivalencias
+  const tipoMap = {
+    docente: "docentes",
+    estudiante: "estudiantes",
+    administrativo: "administrativos"
+  };
+
+  const snapshot = await getDocs(collection(db, "historial"));
+  snapshot.forEach(doc => {
+    const p = doc.data();
+
+    // 🧩 Normalización de tipo de usuario
+    let tipoOriginal = (p.tipoUsuario || "").toLowerCase().trim();
+    if (tipoOriginal.includes("docen") || tipoOriginal.includes("formad")) tipoOriginal = "docente";
+    else if (tipoOriginal.includes("estu")) tipoOriginal = "estudiante";
+    else if (tipoOriginal.includes("admin")) tipoOriginal = "administrativo";
+
+    const tipo = tipoMap[tipoOriginal];
+    if (!tipo || !estadisticas[tipo]) {
+      console.warn("❌ Tipo no reconocido:", p.tipoUsuario);
+      return;
+    }
+
+    const grupo = estadisticas[tipo];
+
+    // 🕒 Calcular horas y determinar turno
+    let horasNetas = 0;
+    let horaInicio = 0;
+
+    // ✅ Nuevo formato (varios salones)
+    if (Array.isArray(p.salones) && p.salones.length > 0) {
+      p.salones.forEach(salon => {
+        if (salon.horaEntrega && salon.horaDevolucion) {
+          horasNetas += calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
+          if (!horaInicio) horaInicio = parseInt(salon.horaEntrega.split(":")[0]);
         }
-  
-        const grupo = estadisticas[tipo];
-  
-        const hora = parseInt(p.horaEntrega.split(":")[0]);
-        if (hora < 12) grupo.mañana++;
-        else grupo.tarde++;
-  
-        const horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
-  
-// ✅ Nuevo cálculo compatible con objetos {nombre, cantidad}
-(p.equipos || []).forEach(eq => {
-  // Si los equipos vienen como string viejo (casos antiguos)
-  const nombre = typeof eq === "string" ? eq.toUpperCase() : (eq.nombre || "").toUpperCase();
-  const cantidad = typeof eq === "string" ? 1 : (eq.cantidad || 1);
-  const horasTotales = horasNetas * cantidad;
-
-  if (nombre.includes("HDMI (TV)")) grupo.horasHDMITV += horasTotales;
-  if (nombre.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasTotales;
-  if (nombre.includes("CONTROL VB")) grupo.horasVB += horasTotales;
-  if (nombre.includes("PORTATIL")) grupo.horasPortatiles += horasTotales;
-  if (nombre.includes("ANCHOR")) grupo.horasAnchors += horasTotales;
-});
-
       });
-  
-      // Renderizar tabla
-      const tabla = document.querySelector("#tablaEstadisticas tbody");
-       tabla.innerHTML = `
-            <tr>
-              <td>Docentes</td>
-              <td>${estadisticas.docentes.mañana}</td>
-              <td>${estadisticas.docentes.tarde}</td>
-              <td>${estadisticas.docentes.horasHDMITV.toFixed(2)}</td>
-              <td>${estadisticas.docentes.horasHDMIOneScreen.toFixed(2)}</td>
-              <td>${estadisticas.docentes.horasVB.toFixed(2)}</td>
-              <td>${estadisticas.docentes.horasPortatiles.toFixed(2)}</td>
-              <td>${estadisticas.docentes.horasAnchors.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td>Estudiantes</td>
-              <td>${estadisticas.estudiantes.mañana}</td>
-              <td>${estadisticas.estudiantes.tarde}</td>
-              <td>${estadisticas.estudiantes.horasHDMITV.toFixed(2)}</td>
-              <td>${estadisticas.estudiantes.horasHDMIOneScreen.toFixed(2)}</td>
-              <td>${estadisticas.estudiantes.horasVB.toFixed(2)}</td>
-              <td>${estadisticas.estudiantes.horasPortatiles.toFixed(2)}</td>
-              <td>${estadisticas.estudiantes.horasAnchors.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td>Administrativos</td>
-              <td>${estadisticas.administrativos.mañana}</td>
-              <td>${estadisticas.administrativos.tarde}</td>
-              <td>${estadisticas.administrativos.horasHDMITV.toFixed(2)}</td>
-              <td>${estadisticas.administrativos.horasHDMIOneScreen.toFixed(2)}</td>
-              <td>${estadisticas.administrativos.horasVB.toFixed(2)}</td>
-              <td>${estadisticas.administrativos.horasPortatiles.toFixed(2)}</td>
-              <td>${estadisticas.administrativos.horasAnchors.toFixed(2)}</td>
-            </tr>
-          `;
-// Guardar los datos en variables globales
-window.estadisticas = estadisticas;
-window.prestamos = snapshot.docs.map(d => d.data());
+    }
+    // 🕗 Formato antiguo (un solo horario)
+    else if (p.horaEntrega && p.horaDevolucion) {
+      horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+      horaInicio = parseInt(p.horaEntrega.split(":")[0]);
+    } else {
+      console.warn("⏱️ Sin horas registradas para:", p.documento);
+    }
 
+    if (horaInicio < 12) grupo.mañana++;
+    else grupo.tarde++;
 
-// Calcular total de servicios
-let totalServicios = 0;
-for (const tipo in estadisticas) {
-  totalServicios += estadisticas[tipo].mañana + estadisticas[tipo].tarde;
+    // 💻 Sumar horas por tipo de equipo
+    (p.equipos || []).forEach(eq => {
+      const nombre = typeof eq === "string" ? eq.toUpperCase() : (eq.nombre || "").toUpperCase();
+      const cantidad = typeof eq === "string" ? 1 : (eq.cantidad || 1);
+      const horasTotales = horasNetas * cantidad;
+
+      if (nombre.includes("HDMI (TV)")) grupo.horasHDMITV += horasTotales;
+      if (nombre.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasTotales;
+      if (nombre.includes("CONTROL VB")) grupo.horasVB += horasTotales;
+      if (nombre.includes("PORTATIL")) grupo.horasPortatiles += horasTotales;
+      if (nombre.includes("ANCHOR")) grupo.horasAnchors += horasTotales;
+    });
+  });
+
+  // 🧾 Renderizar tabla
+  const tabla = document.querySelector("#tablaEstadisticas tbody");
+  tabla.innerHTML = `
+    <tr>
+      <td>Docentes</td>
+      <td>${estadisticas.docentes.mañana}</td>
+      <td>${estadisticas.docentes.tarde}</td>
+      <td>${estadisticas.docentes.horasHDMITV.toFixed(2)}</td>
+      <td>${estadisticas.docentes.horasHDMIOneScreen.toFixed(2)}</td>
+      <td>${estadisticas.docentes.horasVB.toFixed(2)}</td>
+      <td>${estadisticas.docentes.horasPortatiles.toFixed(2)}</td>
+      <td>${estadisticas.docentes.horasAnchors.toFixed(2)}</td>
+    </tr>
+    <tr>
+      <td>Estudiantes</td>
+      <td>${estadisticas.estudiantes.mañana}</td>
+      <td>${estadisticas.estudiantes.tarde}</td>
+      <td>${estadisticas.estudiantes.horasHDMITV.toFixed(2)}</td>
+      <td>${estadisticas.estudiantes.horasHDMIOneScreen.toFixed(2)}</td>
+      <td>${estadisticas.estudiantes.horasVB.toFixed(2)}</td>
+      <td>${estadisticas.estudiantes.horasPortatiles.toFixed(2)}</td>
+      <td>${estadisticas.estudiantes.horasAnchors.toFixed(2)}</td>
+    </tr>
+    <tr>
+      <td>Administrativos</td>
+      <td>${estadisticas.administrativos.mañana}</td>
+      <td>${estadisticas.administrativos.tarde}</td>
+      <td>${estadisticas.administrativos.horasHDMITV.toFixed(2)}</td>
+      <td>${estadisticas.administrativos.horasHDMIOneScreen.toFixed(2)}</td>
+      <td>${estadisticas.administrativos.horasVB.toFixed(2)}</td>
+      <td>${estadisticas.administrativos.horasPortatiles.toFixed(2)}</td>
+      <td>${estadisticas.administrativos.horasAnchors.toFixed(2)}</td>
+    </tr>
+  `;
+
+  // 📊 Guardar variables globales
+  window.estadisticas = estadisticas;
+  window.prestamos = snapshot.docs.map(d => d.data());
+
+  // 🧮 Calcular total de servicios
+  let totalServicios = 0;
+  for (const tipo in estadisticas) {
+    totalServicios += estadisticas[tipo].mañana + estadisticas[tipo].tarde;
+  }
+  window.totalServicios = totalServicios;
+
+  console.log("✅ Estadísticas y préstamos listos para exportar");
 }
-window.totalServicios = totalServicios;
 
-console.log("✅ Estadísticas y préstamos listos para exportar");
-
-    }
-  
-    function calcularHorasNetas(horaEntrega, horaDevolucion) {
-      const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
-      const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
-      const diferencia = devolucion - entrega;
-      return Math.max(0, diferencia / (1000 * 60 * 60)); // en horas
-    }
-
- 
-
+// 🕓 Cálculo de horas netas
+function calcularHorasNetas(horaEntrega, horaDevolucion) {
+  if (!horaEntrega || !horaDevolucion) return 0;
+  const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
+  const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
+  const diferencia = devolucion - entrega;
+  return Math.max(0, diferencia / (1000 * 60 * 60)); // en horas
+}
 
 
 
