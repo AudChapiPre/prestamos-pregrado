@@ -92,10 +92,11 @@ if (salones.length === 0) {
   const otros = document.getElementById("otros").value.trim();
   if (otros) equipos.push({ nombre: otros, cantidad: 1 });
 
-  if (!nombre || !documento || !facultad || !salon || !horaEntrega || !horaDevolucion || equipos.length === 0) {
-    alert("Por favor, complete todos los campos y agregue al menos un equipo.");
-    return;
-  }
+if (!nombre || !documento || !facultad || salones.length === 0 || equipos.length === 0) {
+  alert("Por favor, complete todos los campos y agregue al menos un equipo.");
+  return;
+}
+
 
   // Validar tipo de usuario
   const tiposValidos = ["administrativo", "docente", "estudiante"];
