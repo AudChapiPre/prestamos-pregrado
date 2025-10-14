@@ -473,7 +473,14 @@ async function cargarDatos() {
         <p><strong>Salón:</strong> ${prestamo.salon}</p>
         <p><strong>Hora Entrega:</strong> ${prestamo.horaEntrega}</p>
         <p><strong>Hora Devolución:</strong> ${prestamo.horaDevolucion}</p>
-        <p><strong>Equipos:</strong> ${prestamo.equipos?.map(e => `${e.nombre} (x${e.cantidad})`).join(", ")}</p>
+       <p><strong>Equipos:</strong> ${
+  Array.isArray(prestamo.equipos)
+    ? prestamo.equipos.map(e => {
+        if (typeof e === "string") return e; // compatibilidad con datos viejos
+        return `${e.nombre} (x${e.cantidad || 1})`;
+      }).join(", ")
+    : "N/A"
+}</p>
 
         <button class="btn-edit" onclick="editarPrestamo('${prestamo.id}')">Editar</button>
         <button class="btn-return" onclick="marcarDevuelto('${prestamo.id}')">Devolver</button>
