@@ -221,38 +221,38 @@ window.editarPrestamo = async function(id) {
   }
 
   const prestamo = snap.data();
-  const equiposDisponibles = ["HDMI (TV)", "HDMI (ONESCREEN)", "CONTROL VB", "HDMI (VIDEOBEAM)", "PORTATIL LENOVO", "ANCHOR"];
+  const equiposDisponibles = [
+    "HDMI (TV)",
+    "HDMI (ONESCREEN)",
+    "CONTROL VB",
+    "HDMI (VIDEOBEAM)",
+    "PORTATIL LENOVO",
+    "ANCHOR"
+  ];
 
-  // Convertir estructura de equipos a array simple de nombres
   const equiposSeleccionados = (prestamo.equipos || []).map(eq =>
     typeof eq === "string" ? eq : eq.nombre
   );
 
-  // Modal
+  // Crear modal limpio
   let modal = document.createElement("div");
   modal.innerHTML = `
     <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: white; padding: 20px; box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
-                border-radius: 10px; z-index: 1000; width: 320px;">
-      <h3>Editar préstamo</h3>
-      <label for="campo">Campo a editar:</label>
-      <select id="campo" onchange="mostrarOpcionesEdicion()">
+                background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+                border-radius: 12px; z-index: 1000; width: 340px;">
+      <h3 style="margin-top:0;">Editar préstamo</h3>
+      <label for="campo">Seleccione qué desea editar:</label>
+      <select id="campo" onchange="mostrarOpcionesEdicion()" style="margin-top:8px;width:100%;">
+        <option value="">-- Seleccione una opción --</option>
         <option value="salones">Salones y horarios</option>
         <option value="equipos">Equipos</option>
-        <option value="facultad">Facultad</option>
-        <option value="tipoUsuario">Tipo de usuario</option>
       </select>
 
-      <div id="inputEdicion" style="margin-top:10px;">
-        <label for="nuevoValor">Nuevo valor:</label>
-        <input type="text" id="nuevoValor" placeholder="Ingrese nuevo valor">
-      </div>
-
-      <div id="salonesEdicion" style="display:none; margin-top:10px;">
-        <h4>Salones</h4>
+      <div id="salonesEdicion" style="display:none; margin-top:15px;">
+        <h4>Salones y horarios</h4>
         <div id="salones-container-editar">
-          ${(prestamo.salones || []).map((s, i) => `
-            <div class="salon-item-editar" data-index="${i}">
+          ${(prestamo.salones || []).map(s => `
+            <div class="salon-item-editar" style="margin-bottom:8px;">
               <input type="text" class="salon" value="${s.nombre || ''}" placeholder="Salón">
               <input type="time" class="horaEntrega" value="${s.horaEntrega || ''}">
               <input type="time" class="horaDevolucion" value="${s.horaDevolucion || ''}">
@@ -262,8 +262,8 @@ window.editarPrestamo = async function(id) {
         <button type="button" onclick="agregarSalonEditar()">+ Añadir salón</button>
       </div>
 
-      <div id="equiposEdicion" style="display:none; margin-top:10px;">
-        <h4>Seleccione equipos</h4>
+      <div id="equiposEdicion" style="display:none; margin-top:15px;">
+        <h4>Equipos</h4>
         <div style="display:flex;flex-wrap:wrap;gap:10px;">
           ${equiposDisponibles.map(eq => `
             <label style="display:flex;align-items:center;gap:5px;background:#eee;padding:5px;border-radius:5px;">
@@ -271,13 +271,14 @@ window.editarPrestamo = async function(id) {
               ${eq}
               <input type="number" min="1" value="${
                 (prestamo.equipos.find(e => e.nombre === eq)?.cantidad) || 1
-              }" style="width:50px;text-align:center;">
-            </label>`).join("")}
+              }" style="width:45px;text-align:center;">
+            </label>
+          `).join("")}
         </div>
-        <input type="text" id="otrosEquipos" placeholder="Otros equipos">
+        <input type="text" id="otrosEquipos" placeholder="Otros equipos" style="margin-top:8px;width:100%;">
       </div>
 
-      <div style="margin-top:10px;">
+      <div style="margin-top:15px;text-align:right;">
         <button onclick="guardarEdicionFirestore('${id}')">💾 Guardar</button>
         <button onclick="cerrarModal()">Cancelar</button>
       </div>
@@ -290,8 +291,10 @@ window.editarPrestamo = async function(id) {
 
 window.agregarSalonEditar = function() {
   const contenedor = document.getElementById("salones-container-editar");
+  if (!contenedor) return;
   const nuevo = document.createElement("div");
   nuevo.className = "salon-item-editar";
+  nuevo.style.marginBottom = "8px";
   nuevo.innerHTML = `
     <input type="text" class="salon" placeholder="Salón">
     <input type="time" class="horaEntrega">
@@ -300,8 +303,19 @@ window.agregarSalonEditar = function() {
   contenedor.appendChild(nuevo);
 };
 
+window.mostrarOpcionesEdicion = function() {
+  const campo = document.getElementById("campo").value;
+  document.getElementById("salonesEdicion").style.display = campo === "salones" ? "block" : "none";
+  document.getElementById("equiposEdicion").style.display = campo === "equipos" ? "block" : "none";
+};
+
 window.guardarEdicionFirestore = async function(id) {
   const campo = document.getElementById("campo").value;
+  if (!campo) {
+    alert("Seleccione una opción para editar.");
+    return;
+  }
+
   const ref = doc(db, "prestamos", id);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
@@ -318,7 +332,8 @@ window.guardarEdicionFirestore = async function(id) {
     if (otros) nuevosEquipos.push({ nombre: otros, cantidad: 1 });
     prestamo.equipos = nuevosEquipos;
   }
-  else if (campo === "salones") {
+
+  if (campo === "salones") {
     const salones = [];
     document.querySelectorAll("#salones-container-editar .salon-item-editar").forEach(div => {
       const nombre = div.querySelector(".salon").value.trim();
@@ -330,26 +345,12 @@ window.guardarEdicionFirestore = async function(id) {
     });
     prestamo.salones = salones;
   }
-  else {
-    const nuevoValor = document.getElementById("nuevoValor").value.trim();
-    if (!nuevoValor) {
-      alert("Ingrese un valor válido.");
-      return;
-    }
-    prestamo[campo] = nuevoValor;
-  }
 
   await setDoc(ref, prestamo);
   cerrarModal();
   mostrarPrestamosActivos();
 };
 
-window.mostrarOpcionesEdicion = function() {
-  const campo = document.getElementById("campo").value;
-  document.getElementById("inputEdicion").style.display = campo === "facultad" || campo === "tipoUsuario" ? "block" : "none";
-  document.getElementById("salonesEdicion").style.display = campo === "salones" ? "block" : "none";
-  document.getElementById("equiposEdicion").style.display = campo === "equipos" ? "block" : "none";
-};
 
 
 window.cerrarModal = function() {
