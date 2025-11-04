@@ -211,6 +211,7 @@ window.marcarDevuelto = async function(id) {
     console.error("❌ Error al agregar al historial:", error);
   }
 }
+
 window.editarPrestamo = async function(id) {
   const ref = doc(db, "prestamos", id);
   const snap = await getDoc(ref);
@@ -220,41 +221,66 @@ window.editarPrestamo = async function(id) {
   }
 
   const prestamo = snap.data();
-  let equiposDisponibles = ["HDMI (TV)", "HDMI (ONESCREEN)", "CONTROL VB", "HDMI (VIDEOBEAM)", "PORTATIL LENOVO", "ANCHOR"];
+  const equiposDisponibles = ["HDMI (TV)", "HDMI (ONESCREEN)", "CONTROL VB", "HDMI (VIDEOBEAM)", "PORTATIL LENOVO", "ANCHOR"];
+
+  // Convertir estructura de equipos a array simple de nombres
+  const equiposSeleccionados = (prestamo.equipos || []).map(eq =>
+    typeof eq === "string" ? eq : eq.nombre
+  );
 
   // Modal
   let modal = document.createElement("div");
   modal.innerHTML = `
     <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
                 background: white; padding: 20px; box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
-                border-radius: 10px; z-index: 1000; width: 300px;">
-      <h3>Editar Préstamo</h3>
-      <label for="campo">Seleccione el campo a editar:</label>
+                border-radius: 10px; z-index: 1000; width: 320px;">
+      <h3>Editar préstamo</h3>
+      <label for="campo">Campo a editar:</label>
       <select id="campo" onchange="mostrarOpcionesEdicion()">
-          <option value="salon">Salón</option>
-          <option value="horaEntrega">Hora de Entrega</option>
-          <option value="horaDevolucion">Hora de Devolución</option>
-          <option value="equipos">Equipos</option>
+        <option value="salones">Salones y horarios</option>
+        <option value="equipos">Equipos</option>
+        <option value="facultad">Facultad</option>
+        <option value="tipoUsuario">Tipo de usuario</option>
       </select>
-      <br><br>
-      <div id="inputEdicion">
-          <label for="nuevoValor">Nuevo Valor:</label>
-          <input type="text" id="nuevoValor" placeholder="Ingrese el nuevo valor">
+
+      <div id="inputEdicion" style="margin-top:10px;">
+        <label for="nuevoValor">Nuevo valor:</label>
+        <input type="text" id="nuevoValor" placeholder="Ingrese nuevo valor">
       </div>
-      <div id="equiposEdicion" style="display: none;">
-          <h4>Seleccione los equipos:</h4>
-          <div class="checkbox-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
-              ${equiposDisponibles.map(eq => `
-                  <label style="display: flex; align-items: center; gap: 5px; background: #e8e8e8; padding: 5px 10px; border-radius: 5px;">
-                      <input type="checkbox" value="${eq}" ${prestamo.equipos.includes(eq) ? "checked" : ""}>
-                      ${eq}
-                  </label>`).join("")}
-          </div>
-          <input type="text" id="otrosEquipos" placeholder="Otros equipos">
+
+      <div id="salonesEdicion" style="display:none; margin-top:10px;">
+        <h4>Salones</h4>
+        <div id="salones-container-editar">
+          ${(prestamo.salones || []).map((s, i) => `
+            <div class="salon-item-editar" data-index="${i}">
+              <input type="text" class="salon" value="${s.nombre || ''}" placeholder="Salón">
+              <input type="time" class="horaEntrega" value="${s.horaEntrega || ''}">
+              <input type="time" class="horaDevolucion" value="${s.horaDevolucion || ''}">
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" onclick="agregarSalonEditar()">+ Añadir salón</button>
       </div>
-      <br>
-      <button onclick="guardarEdicionFirestore('${id}')">Guardar</button>
-      <button onclick="cerrarModal()">Cancelar</button>
+
+      <div id="equiposEdicion" style="display:none; margin-top:10px;">
+        <h4>Seleccione equipos</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          ${equiposDisponibles.map(eq => `
+            <label style="display:flex;align-items:center;gap:5px;background:#eee;padding:5px;border-radius:5px;">
+              <input type="checkbox" value="${eq}" ${equiposSeleccionados.includes(eq) ? "checked" : ""}>
+              ${eq}
+              <input type="number" min="1" value="${
+                (prestamo.equipos.find(e => e.nombre === eq)?.cantidad) || 1
+              }" style="width:50px;text-align:center;">
+            </label>`).join("")}
+        </div>
+        <input type="text" id="otrosEquipos" placeholder="Otros equipos">
+      </div>
+
+      <div style="margin-top:10px;">
+        <button onclick="guardarEdicionFirestore('${id}')">💾 Guardar</button>
+        <button onclick="cerrarModal()">Cancelar</button>
+      </div>
     </div>
   `;
 
@@ -262,49 +288,69 @@ window.editarPrestamo = async function(id) {
   document.body.appendChild(modal);
 };
 
+window.agregarSalonEditar = function() {
+  const contenedor = document.getElementById("salones-container-editar");
+  const nuevo = document.createElement("div");
+  nuevo.className = "salon-item-editar";
+  nuevo.innerHTML = `
+    <input type="text" class="salon" placeholder="Salón">
+    <input type="time" class="horaEntrega">
+    <input type="time" class="horaDevolucion">
+  `;
+  contenedor.appendChild(nuevo);
+};
+
 window.guardarEdicionFirestore = async function(id) {
   const campo = document.getElementById("campo").value;
-
   const ref = doc(db, "prestamos", id);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
-
   const prestamo = snap.data();
 
   if (campo === "equipos") {
     const checkboxes = document.querySelectorAll("#equiposEdicion input[type='checkbox']:checked");
-    let seleccionados = Array.from(checkboxes).map(cb => cb.value);
+    const nuevosEquipos = [];
+    checkboxes.forEach(cb => {
+      const cantidad = parseInt(cb.nextElementSibling.value) || 1;
+      nuevosEquipos.push({ nombre: cb.value, cantidad });
+    });
     const otros = document.getElementById("otrosEquipos").value.trim();
-    if (otros) seleccionados.push(otros);
-    prestamo.equipos = seleccionados;
-  } else {
+    if (otros) nuevosEquipos.push({ nombre: otros, cantidad: 1 });
+    prestamo.equipos = nuevosEquipos;
+  }
+  else if (campo === "salones") {
+    const salones = [];
+    document.querySelectorAll("#salones-container-editar .salon-item-editar").forEach(div => {
+      const nombre = div.querySelector(".salon").value.trim();
+      const horaEntrega = div.querySelector(".horaEntrega").value;
+      const horaDevolucion = div.querySelector(".horaDevolucion").value;
+      if (nombre && horaEntrega && horaDevolucion) {
+        salones.push({ nombre, horaEntrega, horaDevolucion });
+      }
+    });
+    prestamo.salones = salones;
+  }
+  else {
     const nuevoValor = document.getElementById("nuevoValor").value.trim();
     if (!nuevoValor) {
-      alert("El valor no puede estar vacío.");
+      alert("Ingrese un valor válido.");
       return;
     }
     prestamo[campo] = nuevoValor;
   }
 
   await setDoc(ref, prestamo);
-cerrarModal();
-mostrarPrestamosActivos(); // ✅ aquí sí funciona
-
+  cerrarModal();
+  mostrarPrestamosActivos();
 };
 
 window.mostrarOpcionesEdicion = function() {
-  let campoSeleccionado = document.getElementById("campo").value;
-  let inputTexto = document.getElementById("inputEdicion");
-  let equiposEdicion = document.getElementById("equiposEdicion");
-
-  if (campoSeleccionado === "equipos") {
-    inputTexto.style.display = "none";
-    equiposEdicion.style.display = "block";
-  } else {
-    inputTexto.style.display = "block";
-    equiposEdicion.style.display = "none";
-  }
+  const campo = document.getElementById("campo").value;
+  document.getElementById("inputEdicion").style.display = campo === "facultad" || campo === "tipoUsuario" ? "block" : "none";
+  document.getElementById("salonesEdicion").style.display = campo === "salones" ? "block" : "none";
+  document.getElementById("equiposEdicion").style.display = campo === "equipos" ? "block" : "none";
 };
+
 
 window.cerrarModal = function() {
   let modal = document.getElementById("modalEditar");
