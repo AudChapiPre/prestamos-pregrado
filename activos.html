@@ -62,58 +62,47 @@ debugLeerColeccionesPosibles();
 card.innerHTML = `
   <div class="card-header">
     <div>
-<h2 style="margin:0; font-size:1.5em;">${
-  // Mostrar el primer salón si existe la versión nueva con array,
-  // si es antiguo, usa prestamo.salon
-  Array.isArray(prestamo.salones) && prestamo.salones.length > 0
-    ? prestamo.salones.map(s => s.nombre || "Sin nombre").join(" / ")
-    : (prestamo.salon || "Sin salón")
-}</h2>
-<p style="margin:0; font-size:0.9em; color:#555;">
-  ${
-    Array.isArray(prestamo.salones)
-      ? prestamo.salones.map(s => `${s.nombre || "sin"} (${s.horaEntrega || "?"} → ${s.horaDevolucion || "?"})`).join(", ")
-      : (prestamo.salon ? `${prestamo.salon} (${prestamo.horaEntrega || "?"} → ${prestamo.horaDevolucion || "?"})` : "Sin horario")
-  }
-</p>
-
-<p style="margin:0; font-size:0.9em; color:#555;">
-  ${
-    Array.isArray(prestamo.equipos)
-      ? prestamo.equipos.map(e => {
-          if (!e) return "";
-          if (typeof e === "string") return e; // compatibilidad con préstamos antiguos
-          const nombre = e.nombre || e.equipo || "Desconocido";
-          const cantidad = e.cantidad || 1;
-          return `${nombre} (x${cantidad})`;
-        }).join(", ")
-      : "Sin equipos"
-  }
-</p>
-
+      <h2 style="margin:0; font-size:1.5em;">
+        ${
+          Array.isArray(prestamo.salones) && prestamo.salones.length > 0
+            ? prestamo.salones.map(s => s.nombre || "Sin nombre").join(" / ")
+            : (prestamo.salon || "Sin salón")
+        }
+      </h2>
+      <p style="margin:0; font-size:0.9em; color:#555;">
+        ${
+          Array.isArray(prestamo.salones)
+            ? prestamo.salones.map(s => `${s.nombre || "sin"} (${s.horaEntrega || "?"} → ${s.horaDevolucion || "?"})`).join(", ")
+            : (prestamo.salon ? `${prestamo.salon} (${prestamo.horaEntrega || "?"} → ${prestamo.horaDevolucion || "?"})` : "Sin horario")
+        }
+      </p>
+      <p style="margin:0; font-size:0.9em; color:#555;">
+        ${
+          Array.isArray(prestamo.equipos)
+            ? prestamo.equipos.map(e => {
+                if (!e) return "";
+                if (typeof e === "string") return e;
+                const nombre = e.nombre || e.equipo || "Desconocido";
+                const cantidad = e.cantidad || 1;
+                return `${nombre} (x${cantidad})`;
+              }).join(", ")
+            : "Sin equipos"
+        }
+      </p>
     </div>
-    <span style="font-weight:bold; color:${prestamo.devuelto ? 'green' : 'red'};">
-      ${prestamo.devuelto ? "Devuelto" : "En préstamo"}
-    </span>
+    <input type="checkbox" class="seleccion-prestamo" value="${docu.id}" style="transform:scale(1.5); margin-left:10px;">
   </div>
   <div class="card-body">
     <p><strong>Nombre:</strong> ${prestamo.nombre}</p>
     <p><strong>Documento:</strong> ${prestamo.documento}</p>
     <p><strong>Tipo de Usuario:</strong> ${prestamo.tipoUsuario}</p>
     <p><strong>Facultad:</strong> ${prestamo.facultad}</p>
-<p><strong>Salones:</strong> ${
-  Array.isArray(prestamo.salones)
-    ? prestamo.salones
-        .map(s => `${s.nombre || "?"} (${s.horaEntrega || "?"} → ${s.horaDevolucion || "?"})`)
-        .join(", ")
-    : `${prestamo.salon || "?"} (${prestamo.horaEntrega || "?"} → ${prestamo.horaDevolucion || "?"})`
-}</p>
 
-    <button class="btn-edit" onclick="editarPrestamo('${prestamo.documento}')">Editar</button>
-   
-    <button class="btn-delete" onclick="eliminarPrestamo('${prestamo.documento}')">Eliminar</button>
+    <button class="btn-edit" onclick="editarPrestamo('${docu.id}')">Editar</button>
+    <button class="btn-delete" onclick="eliminarPrestamo('${docu.id}')">Eliminar</button>
   </div>
 `;
+
 
 
           card.addEventListener("click", () => {
@@ -175,6 +164,53 @@ window.eliminarPrestamo = async function(id) {
     console.error("❌ Error eliminando el préstamo:", error);
     alert("❌ Error eliminando el préstamo: " + error.message);
   }
+};
+
+window.eliminarSeleccionados = async function() {
+  const seleccionados = Array.from(document.querySelectorAll(".seleccion-prestamo:checked")).map(cb => cb.value);
+  if (seleccionados.length === 0) {
+    alert("No has seleccionado ningún préstamo.");
+    return;
+  }
+
+  if (!confirm(`¿Seguro que deseas eliminar ${seleccionados.length} préstamo(s)? Serán enviados al historial.`)) return;
+
+  for (const id of seleccionados) {
+    try {
+      const ref = doc(db, "prestamos", id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) continue;
+
+      const prestamoEliminado = snap.data();
+
+      // 🔹 Calcular horas netas (igual que en eliminarPrestamo)
+      let horasNetas = 0;
+      if (Array.isArray(prestamoEliminado.salones)) {
+        prestamoEliminado.salones.forEach(salon => {
+          if (salon.horaEntrega && salon.horaDevolucion) {
+            horasNetas += parseFloat(calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion));
+          }
+        });
+      }
+
+      // 🔹 Guardar en historial
+      await addDoc(collection(db, "historial"), {
+        ...prestamoEliminado,
+        horasTotales: horasNetas,
+        fechaFin: new Date().toISOString()
+      });
+
+      // 🔹 Eliminar del activo
+      await deleteDoc(ref);
+
+      console.log(`✅ ${id} enviado al historial y eliminado`);
+    } catch (error) {
+      console.error(`❌ Error eliminando ${id}:`, error);
+    }
+  }
+
+  alert(`✅ ${seleccionados.length} préstamo(s) enviados al historial y eliminados.`);
+  mostrarPrestamosActivos();
 };
 
 
@@ -567,6 +603,10 @@ window.cerrarModal = function() {
         <!-- Lista de préstamos en tarjetas (arriba del formulario) -->
         <h2>Préstamos Activos</h2>
         <div id="listaPrestamos"></div>
+        <button onclick="eliminarSeleccionados()" style="background:red;color:white;padding:10px 15px;border:none;border-radius:5px;cursor:pointer;margin-bottom:10px;">
+🗑️ Eliminar seleccionados
+</button>
+
         
         
        
