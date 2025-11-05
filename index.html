@@ -142,11 +142,33 @@ const prestamo = {
 
   alert("✅ Préstamo registrado correctamente.");
 
-  // Limpiar formulario
-  ["documento", "nombre", "tipoUsuario", "facultad", "salon", "horaEntrega", "horaDevolucion", "otros"].forEach(id => {
-    document.getElementById(id).value = "";
+  // 🔄 Limpiar todos los campos del formulario
+  document.getElementById("documento").value = "";
+  document.getElementById("nombre").value = "";
+  document.getElementById("tipoUsuario").value = "";
+  document.getElementById("facultad").value = "";
+  document.getElementById("otros").value = "";
+
+  // 🧹 Reiniciar los salones
+  const salonesContainer = document.getElementById("salones-container");
+  salonesContainer.innerHTML = `
+    <div class="salon-item">
+      <input type="text" class="salon" placeholder="Salón (ej: 301P)">
+      <label>Hora entrega:</label>
+      <input type="time" class="horaEntrega">
+      <label>Hora devolución:</label>
+      <input type="time" class="horaDevolucion">
+    </div>
+  `;
+
+  // 🔢 Reiniciar todas las cantidades de equipos
+  document.querySelectorAll(".cantidad-equipo").forEach(input => {
+    input.value = 0;
   });
-  document.querySelectorAll(".cantidad-equipo").forEach(input => input.value = 0);
+
+  // ✅ Confirmación visual
+  console.log("Formulario reiniciado completamente.");
+
 
   if (typeof cargarDatos === "function") cargarDatos();
 };
@@ -165,6 +187,20 @@ const prestamo = {
             margin: 20px;
             background-color: #f4f4f4;
         }
+/* 🔢 Inputs de cantidad más grandes y visibles */
+.cantidad-equipo {
+  width: 70px;
+  padding: 8px;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+/* Aumentar tamaño de las flechas del input */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  transform: scale(1.5);
+  margin: 0 5px;
+}
 
         /* Estilos para préstamos activos y devueltos */
         .prestamo-activo {
