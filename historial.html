@@ -125,69 +125,119 @@ async function cargarHistorial() {
 
 //EXPORTAR HISTORIAL
 
-      window.exportarHistorial = function () {
-    const historial = window.historialFire || [];
-    if (historial.length === 0) {
-        alert("No hay datos para exportar.");
-        return;
+window.exportarHistorial = function () {
+  const historial = window.historialFire || [];
+  if (historial.length === 0) {
+    alert("No hay datos para exportar.");
+    return;
+  }
+
+  // Construir encabezados
+  const rows = [
+    [
+      "Fecha",
+      "Nombre",
+      "Documento",
+      "Tipo de Usuario",
+      "Facultad",
+      "Salones",
+      "Hora Entrega",
+      "Hora Devolución",
+      "Equipos",
+      "Horas Netas"
+    ]
+  ];
+
+  historial.forEach(p => {
+    // 🧩 Compatibilidad con múltiples salones
+    const salones = Array.isArray(p.salones)
+      ? p.salones.map(s => s.nombre || "Sin nombre").join(" / ")
+      : (p.salon || "N/A");
+
+    const horaEntrega = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaEntrega || "?").join(", ")
+      : (p.horaEntrega || "N/A");
+
+    const horaDevolucion = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaDevolucion || "?").join(", ")
+      : (p.horaDevolucion || "N/A");
+
+    // 💻 Equipos (corrige [object Object])
+    const equipos = Array.isArray(p.equipos)
+      ? p.equipos.map(e => {
+          if (typeof e === "string") return e;
+          const nombre = e.nombre || e.equipo || "Desconocido";
+          const cantidad = e.cantidad || 1;
+          return `${nombre} (x${cantidad})`;
+        }).join(" - ")
+      : "N/A";
+
+    // 🕒 Calcular horas netas (suma total de todos los salones)
+    let horasNetas = 0;
+    if (Array.isArray(p.salones) && p.salones.length > 0) {
+      p.salones.forEach(s => {
+        horasNetas += calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+      });
+    } else {
+      horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
     }
 
-    // Construir datos (encabezados + filas)
-    const rows = [
-        ["Fecha", "Nombre", "Documento", "Tipo de Usuario", "Facultad", "Salón", "Hora Entrega", "Hora Devolución", "Equipos", "Horas Netas"],
-        ...historial.map(p => [
-            p.fecha || "N/A",
-            p.nombre,
-            p.documento,
-            p.tipoUsuario,
-            p.facultad,
-            p.salon,
-            p.horaEntrega,
-            p.horaDevolucion,
-            p.equipos ? p.equipos.join(" - ") : "",
-            calcularHorasNetas(p.horaEntrega, p.horaDevolucion)
-        ])
-    ];
+    // 🧾 Agregar fila
+    rows.push([
+      p.fecha || "N/A",
+      p.nombre || "N/A",
+      p.documento || "N/A",
+      p.tipoUsuario || "N/A",
+      p.facultad || "N/A",
+      salones,
+      horaEntrega,
+      horaDevolucion,
+      equipos,
+      horasNetas.toFixed(2)
+    ]);
+  });
 
-    // Crear hoja desde array
-    const ws = XLSX.utils.aoa_to_sheet(rows);
+  // Crear hoja desde array
+  const ws = XLSX.utils.aoa_to_sheet(rows);
 
-    // Estilo básico para encabezados (azul con letras blancas y centrados)
-    const headerCells = ["A1","B1","C1","D1","E1","F1","G1","H1","I1","J1"];
-    headerCells.forEach(cell => {
-    if(ws[cell]) {
-        ws[cell].s = {
-            font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } },
-            fill: { patternType: "solid", fgColor: { rgb: "007BFF" } },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-              top:    { style: "thin", color: { rgb: "000000" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left:   { style: "thin", color: { rgb: "000000" } },
-              right:  { style: "thin", color: { rgb: "000000" } }
-            }
-        };
+  // Encabezados con estilo azul y texto blanco
+  const headerCells = ["A1","B1","C1","D1","E1","F1","G1","H1","I1","J1"];
+  headerCells.forEach(cell => {
+    if (ws[cell]) {
+      ws[cell].s = {
+        font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { patternType: "solid", fgColor: { rgb: "007BFF" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top:    { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left:   { style: "thin", color: { rgb: "000000" } },
+          right:  { style: "thin", color: { rgb: "000000" } }
+        }
+      };
     }
-});
+  });
 
-    // Ajustar ancho de columnas automáticamente
-    ws["!cols"] = [
-        { wch: 12 },  // Fecha
-        { wch: 50 },  // Nombre
-        { wch: 15 },  // Documento
-        { wch: 18 },  // Tipo de Usuario
-        { wch: 50 },  // Facultad
-        { wch: 12 },  // Salón
-        { wch: 12 },  // Hora Entrega
-        { wch: 15 },  // Hora Devolución
-        { wch: 50 },  // Equipos
-        { wch: 12 }   // Horas Netas
-    ];
+  // Ajustar ancho de columnas
+  ws["!cols"] = [
+    { wch: 12 },  // Fecha
+    { wch: 40 },  // Nombre
+    { wch: 15 },  // Documento
+    { wch: 18 },  // Tipo de Usuario
+    { wch: 35 },  // Facultad
+    { wch: 25 },  // Salones
+    { wch: 20 },  // Hora Entrega
+    { wch: 20 },  // Hora Devolución
+    { wch: 40 },  // Equipos
+    { wch: 12 }   // Horas Netas
+  ];
 
-    // Crear libro y exportar
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Historial");
-    XLSX.writeFile(wb, "Historial_Prestamos.xlsx");
+  // Crear libro y exportar
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Historial");
+  XLSX.writeFile(wb, "Historial_Prestamos.xlsx");
+
+  alert("✅ Historial exportado correctamente.");
 };
 
 
