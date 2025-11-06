@@ -74,23 +74,26 @@ async function cargarHistorial() {
       ? p.salones.map(s => s.horaDevolucion || "?").join(", ")
       : (p.horaDevolucion || "N/A");
 
+    // 💻 Equipos
     const equipos = Array.isArray(p.equipos)
-      ? p.equipos
-          .map(e => {
-            if (typeof e === "string") return e;
-            if (e?.nombre) return `${e.nombre}${e.cantidad ? ` (x${e.cantidad})` : ""}`;
-            return "Desconocido";
-          })
-          .join(" - ")
+      ? p.equipos.map(e => {
+          if (typeof e === "string") return e;
+          const nombre = e?.nombre || e?.equipo || "Desconocido";
+          const cantidad = e?.cantidad || 1;
+          return `${nombre} (x${cantidad})`;
+        }).join(" - ")
       : "N/A";
 
-    // 🕒 Calcular horas netas (tomando el primer salón válido)
+    // 🕒 Sumar horas netas de todos los salones
     let horasNetas = 0;
-    if (Array.isArray(p.salones) && p.salones.length > 0) {
-      const s = p.salones[0];
-      horasNetas = calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+    if (Array.isArray(p.salones)) {
+      p.salones.forEach(s => {
+        const h = calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+        if (!isNaN(h)) horasNetas += h;
+      });
     } else {
-      horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+      const h = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+      if (!isNaN(h)) horasNetas += h;
     }
 
     const row = `
@@ -159,6 +162,7 @@ window.exportarHistorial = function () {
         }).join(" - ")
       : "N/A";
 
+    // 🕒 Sumar horas netas de todos los salones
     let horasNetas = 0;
     if (Array.isArray(p.salones)) {
       p.salones.forEach(s => {
