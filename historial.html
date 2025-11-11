@@ -89,6 +89,9 @@ async function cargarHistorial() {
 // 🕒 Calcular horas netas (soporta múltiples salones, y también listas tipo "07:00, 09:00")
 let horasNetas = 0;
 
+console.log("DEBUG HORAS:", p.horaEntrega, "|", p.horaDevolucion, "| salones:", p.salones);
+
+
 if (Array.isArray(p.salones) && p.salones.length > 0) {
   // Caso 1: estructura moderna (array de salones)
   p.salones.forEach(salon => {
