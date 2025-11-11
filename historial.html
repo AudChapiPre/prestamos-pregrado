@@ -47,6 +47,25 @@ window.borrarHistorialFirestore = async function () {
 };
 
 
+window.borrarOctubre = async function () {
+  if (!confirm("¿Eliminar todos los registros que no sean de noviembre?")) return;
+
+  const snapshot = await getDocs(collection(db, "historial"));
+  let borrados = 0;
+
+  for (const docu of snapshot.docs) {
+    const data = docu.data();
+    const fecha = data.fecha || "";
+    // Si el registro no es de noviembre (ni vacío), lo eliminamos
+    if (!fecha.includes("2025-11")) {
+      await deleteDoc(docu.ref);
+      borrados++;
+    }
+  }
+
+  alert(`✅ Se eliminaron ${borrados} registros que no son de noviembre.`);
+  cargarHistorial();
+};
 
         
         // Leer historial desde Firestore
@@ -390,7 +409,10 @@ window.exportarHistorial = function () {
 <button onclick="borrarHistorialFirestore()" style="background-color: #ff4444; color: white;">
     Borrar Historial y Estadísticas
   </button>
-  
+  <button onclick="borrarOctubre()" style="background-color:#ff9900; color:white;">
+  Borrar solo registros de octubre
+</button>
+
 
     </div>
 
