@@ -403,102 +403,103 @@ window.exportarHistorial = function () {
 
     </div>
 
-    <script>
-
-
-
-
-//calcular horas netas 
-
-
+ <script>
+/* Función robusta para horas (global, la usa la UI cuando sea necesario) */
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
-  const [h1, m1] = horaEntrega.split(":").map(Number);
-  const [h2, m2] = horaDevolucion.split(":").map(Number);
-  if (isNaN(h1) || isNaN(h2)) return 0;
+  const [h1, m1] = String(horaEntrega).trim().split(":").map(Number);
+  const [h2, m2] = String(horaDevolucion).trim().split(":").map(Number);
+  if (isNaN(h1) || isNaN(h2) || isNaN(m1) || isNaN(m2)) return 0;
   let minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
   if (minutos < 0) minutos += 24 * 60; // si cruza medianoche
   return Number((minutos / 60).toFixed(2));
 }
 
+/* Filtrar filas (usa la tabla ya renderizada) */
+window.filtrarHistorial = function () {
+  let filtro = document.getElementById("busqueda").value.toLowerCase();
+  let filas = document.querySelectorAll("#historialPrestamos tr");
+  filas.forEach(fila => {
+    let textoFila = fila.innerText.toLowerCase();
+    fila.style.display = textoFila.includes(filtro) ? "" : "none";
+  });
+};
 
+/* Exportar usando los datos que cargó el módulo (window.historialFire) */
+window.exportarHistorial = function () {
+  const historial = window.historialFire || [];
+  if (historial.length === 0) {
+    alert("No hay datos para exportar.");
+    return;
+  }
 
+  const rows = [[
+    "Fecha", "Nombre", "Documento", "Tipo de Usuario", "Facultad",
+    "Salones", "Hora Entrega", "Hora Devolución", "Equipos", "Horas Netas"
+  ]];
 
-	// Función para borrar el historial
-function borrarHistorial() {
-    if (confirm("¿Estás seguro de que deseas borrar todo el historial? Esta acción no se puede deshacer.")) {
-        localStorage.removeItem("historial"); // Elimina el historial del localStorage
-        cargarHistorial(); // Recarga la tabla para reflejar que no hay datos
-        alert("El historial ha sido borrado correctamente.");
+  historial.forEach(p => {
+    const salones = Array.isArray(p.salones)
+      ? p.salones.map(s => s.nombre || "Sin nombre").join(" / ")
+      : (p.salon || "N/A");
+
+    const horaEntrega = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaEntrega || "?").join(", ")
+      : (p.horaEntrega || "N/A");
+
+    const horaDevolucion = Array.isArray(p.salones)
+      ? p.salones.map(s => s.horaDevolucion || "?").join(", ")
+      : (p.horaDevolucion || "N/A");
+
+    const equipos = Array.isArray(p.equipos)
+      ? p.equipos.map(e => {
+          if (typeof e === "string") return e;
+          const nombre = e?.nombre || e?.equipo || "Desconocido";
+          const cantidad = e?.cantidad || 1;
+          return `${nombre} (x${cantidad})`;
+        }).join(" - ")
+      : "N/A";
+
+    // Sumar horas netas de todos los salones (si existen)
+    let horasNetas = 0;
+    if (Array.isArray(p.salones) && p.salones.length > 0) {
+      p.salones.forEach(s => {
+        const h = calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+        if (!isNaN(h) && h > 0) horasNetas += h;
+      });
+    } else {
+      const h = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+      if (!isNaN(h) && h > 0) horasNetas = h;
     }
-}
 
+    rows.push([
+      p.fecha || "N/A",
+      p.nombre || "N/A",
+      p.documento || "N/A",
+      p.tipoUsuario || "N/A",
+      p.facultad || "N/A",
+      salones,
+      horaEntrega,
+      horaDevolucion,
+      equipos,
+      Number(horasNetas || 0).toFixed(2)
+    ]);
+  });
 
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [
+    { wch: 12 }, { wch: 40 }, { wch: 15 }, { wch: 18 }, { wch: 35 },
+    { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 40 }, { wch: 12 }
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Historial");
+  XLSX.writeFile(wb, "Historial_Prestamos.xlsx");
+  alert("✅ Historial exportado correctamente.");
+};
 
-        function cargarHistorial() {
-    let historial = JSON.parse(localStorage.getItem("historial")) || [];
-    let historialTabla = document.getElementById("historialPrestamos");
-    historialTabla.innerHTML = "";
+/* NO llamamos aquí a cargarHistorial() — el módulo ya asignó window.onload = cargarHistorial */
+</script>
 
-    // Invertir el orden del historial
-    // historial.reverse().forEach(p => {
-    //     let row = `<tr>
-   //          <td>${p.fecha || 'N/A'}</td> <!-- Nueva columna -->
-   //          <td>${p.nombre}</td>
-   //          <td>${p.documento}</td>
-    //         <td>${p.tipoUsuario}</td>
-    //         <td>${p.facultad}</td>
-    //         <td>${p.salon}</td>
-    //         <td>${p.horaEntrega}</td>
-    //         <td>${p.horaDevolucion}</td>
-    //         <td>${p.equipos.join(" - ")}</td>
-    //         <td>${calcularHorasNetas(p.horaEntrega, p.horaDevolucion)}</td>
-    //     </tr>`;
-    //     historialTabla.innerHTML += row;
-    // });
-}
-
-        // Función para filtrar el historial
-        function filtrarHistorial() {
-            let filtro = document.getElementById("busqueda").value.toLowerCase();
-            let filas = document.querySelectorAll("#historialPrestamos tr");
-            filas.forEach(fila => {
-                let textoFila = fila.innerText.toLowerCase();
-                fila.style.display = textoFila.includes(filtro) ? "" : "none";
-            });
-        }
-
-        function exportarHistorial() {
-    let historial = JSON.parse(localStorage.getItem("historial")) || [];
-    if (historial.length === 0) {
-        alert("No hay datos en el historial para exportar.");
-        return;
-    }
-
-    // Encabezado con la nueva columna de Fecha
-    let csvContent = "Fecha,Nombre,Documento,Tipo de Usuario,Facultad,Salón,Hora Entrega,Hora Devolución,Equipos,Horas Netas\n";
-
-    historial.forEach(p => {
-        let equipos = p.equipos ? p.equipos.join(" - ") : "";
-        let horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
-        // Agregar la fecha al CSV
-        csvContent += `"${p.fecha || 'N/A'}","${p.nombre}","${p.documento}","${p.tipoUsuario}","${p.facultad}","${p.salon}","${p.horaEntrega}","${p.horaDevolucion}","${equipos}","${horasNetas}"\n`;
-    });
-
-    let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    let link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "Historial_Prestamos.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-        // Cargar el historial al abrir la página
-        document.addEventListener("DOMContentLoaded", function () {
-            cargarHistorial();
-        });
-    </script>
     <b> © Juan Ladino - 2025 </b>
 </body>
 </html>
