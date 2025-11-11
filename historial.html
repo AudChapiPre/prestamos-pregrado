@@ -86,19 +86,25 @@ async function cargarHistorial() {
         }).join(" - ")
       : "N/A";
 
-// 🕒 Sumar horas netas de todos los salones (soporta múltiples parejas separadas por coma)
+// 🕒 Calcular horas netas (soporta múltiples salones, y también listas tipo "07:00, 09:00")
 let horasNetas = 0;
 
 if (Array.isArray(p.salones) && p.salones.length > 0) {
-  // Si los salones ya vienen como array con sus horas, calcula uno a uno
+  // Caso 1: estructura moderna (array de salones)
   p.salones.forEach(salon => {
     const h = calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
     if (!isNaN(h) && h > 0) horasNetas += h;
   });
 } else {
-  // Si las horas están en formato de texto "07:00, 09:00" y "09:00, 11:00"
-  const entregas = String(p.horaEntrega || "").split(",").map(h => h.trim());
-  const devoluciones = String(p.horaDevolucion || "").split(",").map(h => h.trim());
+  // Caso 2: texto con varias horas separadas por coma o punto y coma
+  const entregas = String(p.horaEntrega || "")
+    .split(/[,;]+/)
+    .map(h => h.trim())
+    .filter(h => h);
+  const devoluciones = String(p.horaDevolucion || "")
+    .split(/[,;]+/)
+    .map(h => h.trim())
+    .filter(h => h);
 
   for (let i = 0; i < Math.min(entregas.length, devoluciones.length); i++) {
     const h = calcularHorasNetas(entregas[i], devoluciones[i]);
@@ -106,9 +112,8 @@ if (Array.isArray(p.salones) && p.salones.length > 0) {
   }
 }
 
-// Guardar resultado en el préstamo (por si lo usas después)
+// Guardar el total
 p.horasNetas = horasNetas;
-
 
 const row = `
   <tr>
