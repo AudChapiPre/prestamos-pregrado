@@ -353,13 +353,19 @@ async function cargarEstadisticasDesdeFirestore() {
   console.log("✅ Estadísticas y préstamos listos para exportar");
 }
 
-// 🕓 Cálculo de horas netas
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
-  const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
-  const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
-  const diferencia = devolucion - entrega;
-  return Math.max(0, diferencia / (1000 * 60 * 60)); // en horas
+
+  const [h1, m1] = horaEntrega.split(":").map(Number);
+  const [h2, m2] = horaDevolucion.split(":").map(Number);
+  const t1 = h1 * 60 + m1;
+  const t2 = h2 * 60 + m2;
+
+  let diffMin = t2 - t1;
+  if (diffMin < 0) diffMin += 24 * 60; // por si pasó medianoche
+
+  const horas = diffMin / 60;
+  return Number(horas.toFixed(2));
 }
 
 

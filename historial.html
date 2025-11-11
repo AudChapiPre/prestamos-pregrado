@@ -47,55 +47,9 @@ window.borrarHistorialFirestore = async function () {
 };
 
 
-window.borrarOctubre = async function () {
-  if (!confirm("¿Eliminar todos los registros que no sean de noviembre?")) return;
-
-  const snapshot = await getDocs(collection(db, "historial"));
-  let borrados = 0;
-
-  for (const docu of snapshot.docs) {
-    const data = docu.data();
-    const fecha = data.fecha || "";
-    // Si el registro no es de noviembre (ni vacío), lo eliminamos
-    if (!fecha.includes("2025-11")) {
-      await deleteDoc(docu.ref);
-      borrados++;
-    }
-  }
-
-  alert(`✅ Se eliminaron ${borrados} registros que no son de noviembre.`);
-  cargarHistorial();
-};
 
        
-// --- Leer Excel y subirlo ---
-async function restaurarDesdeExcel(archivo) {
-  const data = await archivo.arrayBuffer();
-  const workbook = XLSX.read(data, { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet);
 
-  let subidos = 0;
-  for (const row of rows.slice(1)) { // evitar encabezado si existe
-    const prestamo = {
-      fecha: row["Fecha"] || "N/A",
-      nombre: row["Nombre"] || "N/A",
-      documento: row["Documento"] || "N/A",
-      tipoUsuario: row["Tipo de Usuario"] || "N/A",
-      facultad: row["Facultad"] || "N/A",
-      salon: row["Salones"] || "N/A",
-      horaEntrega: row["Hora Entrega"] || "N/A",
-      horaDevolucion: row["Hora Devolución"] || "N/A",
-      equipos: (row["Equipos"] || "").split(" - ").map(e => ({ nombre: e.trim() })),
-      horasNetas: Number(row["Horas Netas"]) || 0
-    };
-
-    await addDoc(collection(db, "historial"), prestamo);
-    subidos++;
-  }
-
-  alert(`✅ Restauración completa: ${subidos} registros subidos.`);
-}
 
         // Leer historial desde Firestore
 async function cargarHistorial() {
@@ -438,9 +392,6 @@ window.exportarHistorial = function () {
 <button onclick="borrarHistorialFirestore()" style="background-color: #ff4444; color: white;">
     Borrar Historial y Estadísticas
   </button>
-  <button onclick="borrarOctubre()" style="background-color:#ff9900; color:white;">
-  Borrar solo registros de octubre
-</button>
 
 
     </div>
@@ -454,11 +405,19 @@ window.exportarHistorial = function () {
 
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
-  const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
-  const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
-  const diferencia = (devolucion - entrega) / (1000 * 60 * 60);
-  return isNaN(diferencia) ? 0 : Math.max(0, Number(diferencia.toFixed(2)));
+
+  const [h1, m1] = horaEntrega.split(":").map(Number);
+  const [h2, m2] = horaDevolucion.split(":").map(Number);
+  const t1 = h1 * 60 + m1;
+  const t2 = h2 * 60 + m2;
+
+  let diffMin = t2 - t1;
+  if (diffMin < 0) diffMin += 24 * 60; // por si pasó medianoche
+
+  const horas = diffMin / 60;
+  return Number(horas.toFixed(2));
 }
+
 
 
 	// Función para borrar el historial
