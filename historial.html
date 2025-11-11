@@ -396,16 +396,19 @@ window.exportarHistorial = function () {
 
     <script>
 
+
+
+
+//calcular horas netas 
+
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
-
-  let entrega = new Date(`1970-01-01T${horaEntrega}:00`);
-  let devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
-  let diferencia = devolucion - entrega;
-
-  // Retornar solo si es válido
-  return isNaN(diferencia) ? 0 : Math.max(0, diferencia / (1000 * 60 * 60));
+  const entrega = new Date(`1970-01-01T${horaEntrega}:00`);
+  const devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
+  const diferencia = (devolucion - entrega) / (1000 * 60 * 60);
+  return isNaN(diferencia) ? 0 : Math.max(0, Number(diferencia.toFixed(2)));
 }
+
 
 	// Función para borrar el historial
 function borrarHistorial() {
@@ -416,13 +419,7 @@ function borrarHistorial() {
     }
 }
 
-        // Función para calcular horas netas en formato decimal
-        function calcularHorasNetas(horaEntrega, horaDevolucion) {
-            let entrega = new Date(`1970-01-01T${horaEntrega}:00`);
-            let devolucion = new Date(`1970-01-01T${horaDevolucion}:00`);
-            let diferencia = devolucion - entrega; // Diferencia en milisegundos
-            return (diferencia / (1000 * 60 * 60)).toFixed(2); // Convertir a horas con 2 decimales
-        }
+
 
         function cargarHistorial() {
     let historial = JSON.parse(localStorage.getItem("historial")) || [];
