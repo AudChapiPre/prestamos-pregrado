@@ -86,21 +86,33 @@ async function cargarHistorial() {
         }).join(" - ")
       : "N/A";
 
+// 🕒 Sumar horas netas de todos los salones
+let horasNetas = 0;
+if (Array.isArray(p.salones)) {
+  p.salones.forEach(s => {
+    const h = calcularHorasNetas(s.horaEntrega, s.horaDevolucion);
+    if (!isNaN(h) && h > 0) horasNetas += h;
+  });
+} else {
+  const h = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+  if (!isNaN(h) && h > 0) horasNetas += h;
+}
 
-    const row = `
-      <tr>
-        <td>${p.fecha || "N/A"}</td>
-        <td>${p.nombre || "N/A"}</td>
-        <td>${p.documento || "N/A"}</td>
-        <td>${p.tipoUsuario || "N/A"}</td>
-        <td>${p.facultad || "N/A"}</td>
-        <td>${salones}</td>
-        <td>${horaEntrega}</td>
-        <td>${horaDevolucion}</td>
-        <td>${equipos}</td>
-        <td>${horasNetas}</td>
-      </tr>`;
-    tabla.innerHTML += row;
+const row = `
+  <tr>
+    <td>${p.fecha || "N/A"}</td>
+    <td>${p.nombre || "N/A"}</td>
+    <td>${p.documento || "N/A"}</td>
+    <td>${p.tipoUsuario || "N/A"}</td>
+    <td>${p.facultad || "N/A"}</td>
+    <td>${Array.isArray(p.salones) ? p.salones.map(s => s.nombre || "Sin nombre").join(" / ") : (p.salon || "N/A")}</td>
+    <td>${Array.isArray(p.salones) ? p.salones.map(s => s.horaEntrega || "?").join(", ") : (p.horaEntrega || "N/A")}</td>
+    <td>${Array.isArray(p.salones) ? p.salones.map(s => s.horaDevolucion || "?").join(", ") : (p.horaDevolucion || "N/A")}</td>
+    <td>${Array.isArray(p.equipos) ? p.equipos.map(e => (typeof e === "string" ? e : (e.nombre || e.equipo || "Desconocido")) + (e.cantidad ? ` (x${e.cantidad})` : "")).join(" - ") : "N/A"}</td>
+    <td>${Number(horasNetas || 0).toFixed(2)}</td>
+  </tr>`;
+tabla.innerHTML += row;
+
   });
 
   window.historialFire = prestamos;
@@ -390,30 +402,18 @@ window.exportarHistorial = function () {
 
 
 
-// Calcular horas netas (función segura)
+//calcular horas netas 
+
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
   const [h1, m1] = horaEntrega.split(":").map(Number);
   const [h2, m2] = horaDevolucion.split(":").map(Number);
+  if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
   let minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
-  if (minutos < 0) minutos += 24 * 60; // por si pasa de medianoche
+  if (minutos < 0) minutos += 24 * 60; // si pasó medianoche
   return Number((minutos / 60).toFixed(2));
 }
 
-// Calcular total de horas por préstamo (soporta varios salones)
-function obtenerHorasTotalesPrestamo(p) {
-  if (Array.isArray(p.salones) && p.salones.length > 0) {
-    let total = 0;
-    p.salones.forEach(salon => {
-      const h = calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
-      if (!isNaN(h) && h > 0) total += h;
-    });
-    return total;
-  } else {
-    const h = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
-    return !isNaN(h) && h > 0 ? h : 0;
-  }
-}
 
 
 	// Función para borrar el historial
