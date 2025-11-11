@@ -67,7 +67,36 @@ window.borrarOctubre = async function () {
   cargarHistorial();
 };
 
-        
+       
+// --- Leer Excel y subirlo ---
+async function restaurarDesdeExcel(archivo) {
+  const data = await archivo.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet);
+
+  let subidos = 0;
+  for (const row of rows.slice(1)) { // evitar encabezado si existe
+    const prestamo = {
+      fecha: row["Fecha"] || "N/A",
+      nombre: row["Nombre"] || "N/A",
+      documento: row["Documento"] || "N/A",
+      tipoUsuario: row["Tipo de Usuario"] || "N/A",
+      facultad: row["Facultad"] || "N/A",
+      salon: row["Salones"] || "N/A",
+      horaEntrega: row["Hora Entrega"] || "N/A",
+      horaDevolucion: row["Hora Devolución"] || "N/A",
+      equipos: (row["Equipos"] || "").split(" - ").map(e => ({ nombre: e.trim() })),
+      horasNetas: Number(row["Horas Netas"]) || 0
+    };
+
+    await addDoc(collection(db, "historial"), prestamo);
+    subidos++;
+  }
+
+  alert(`✅ Restauración completa: ${subidos} registros subidos.`);
+}
+
         // Leer historial desde Firestore
 async function cargarHistorial() {
   const tabla = document.getElementById("historialPrestamos");
