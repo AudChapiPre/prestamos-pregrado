@@ -266,42 +266,44 @@ async function cargarEstadisticasDesdeFirestore() {
 
     const grupo = estadisticas[tipo];
 
-    // 🕒 Calcular horas y determinar turno
-    let horasNetas = 0;
-    let horaInicio = 0;
+// 🕒 Calcular horas y determinar turno
+let horasNetas = 0;
+let horaInicio = 0;
 
-    // ✅ Nuevo formato (varios salones)
-    if (Array.isArray(p.salones) && p.salones.length > 0) {
-      p.salones.forEach(salon => {
-        if (salon.horaEntrega && salon.horaDevolucion) {
-          horasNetas += calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
-          if (!horaInicio) horaInicio = parseInt(salon.horaEntrega.split(":")[0]);
-        }
-      });
-    }
-    // 🕗 Formato antiguo (un solo horario)
-    else if (p.horaEntrega && p.horaDevolucion) {
-      horasNetas = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
-      horaInicio = parseInt(p.horaEntrega.split(":")[0]);
-    } else {
-      console.warn("⏱️ Sin horas registradas para:", p.documento);
-    }
+// ✅ Nuevo formato (varios salones)
+if (Array.isArray(p.salones) && p.salones.length > 0) {
+  p.salones.forEach(salon => {
+    const h = calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
+    if (!isNaN(h) && h > 0) horasNetas += h;
+    if (!horaInicio && salon.horaEntrega) horaInicio = parseInt(salon.horaEntrega.split(":")[0]);
+  });
+}
+// 🕗 Formato antiguo o migrado (solo un salón)
+else {
+  const h = calcularHorasNetas(p.horaEntrega, p.horaDevolucion);
+  if (!isNaN(h) && h > 0) horasNetas = h;
+  if (p.horaEntrega) horaInicio = parseInt(p.horaEntrega.split(":")[0]);
+}
 
-    if (horaInicio < 12) grupo.mañana++;
-    else grupo.tarde++;
+if (horaInicio < 12) grupo.mañana++;
+else grupo.tarde++;
+
 
     // 💻 Sumar horas por tipo de equipo
-    (p.equipos || []).forEach(eq => {
-      const nombre = typeof eq === "string" ? eq.toUpperCase() : (eq.nombre || "").toUpperCase();
-      const cantidad = typeof eq === "string" ? 1 : (eq.cantidad || 1);
-      const horasTotales = horasNetas * cantidad;
+(p.equipos || []).forEach(eq => {
+  const nombre = typeof eq === "string" ? eq.toUpperCase() : (eq.nombre || "").toUpperCase();
+  const cantidad = typeof eq === "string" ? 1 : (Number(eq.cantidad) || 1);
+  const horasTotales = Number(horasNetas) * cantidad;
 
-      if (nombre.includes("HDMI (TV)")) grupo.horasHDMITV += horasTotales;
-      if (nombre.includes("HDMI (ONESCREEN)")) grupo.horasHDMIOneScreen += horasTotales;
-      if (nombre.includes("CONTROL VB")) grupo.horasVB += horasTotales;
-      if (nombre.includes("PORTATIL")) grupo.horasPortatiles += horasTotales;
-      if (nombre.includes("ANCHOR")) grupo.horasAnchors += horasTotales;
-    });
+  if (isNaN(horasTotales)) return; // evita contaminar sumas
+
+  if (nombre.includes("HDMI") && nombre.includes("TV")) grupo.horasHDMITV += horasTotales;
+  else if (nombre.includes("HDMI") && nombre.includes("ONESCREEN")) grupo.horasHDMIOneScreen += horasTotales;
+  else if (nombre.includes("CONTROL") || nombre.includes("VB")) grupo.horasVB += horasTotales;
+  else if (nombre.includes("PORTATIL")) grupo.horasPortatiles += horasTotales;
+  else if (nombre.includes("ANCHOR")) grupo.horasAnchors += horasTotales;
+});
+
   });
 
   // 🧾 Renderizar tabla
