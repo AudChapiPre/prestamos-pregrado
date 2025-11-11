@@ -404,14 +404,32 @@ window.exportarHistorial = function () {
     </div>
 
  <script>
-/* Función robusta para horas (global, la usa la UI cuando sea necesario) */
+
+/* Función robusta para horas (soporta AM/PM y 24h) */
 function calcularHorasNetas(horaEntrega, horaDevolucion) {
   if (!horaEntrega || !horaDevolucion) return 0;
-  const [h1, m1] = String(horaEntrega).trim().split(":").map(Number);
-  const [h2, m2] = String(horaDevolucion).trim().split(":").map(Number);
-  if (isNaN(h1) || isNaN(h2) || isNaN(m1) || isNaN(m2)) return 0;
-  let minutos = (h2 * 60 + m2) - (h1 * 60 + m1);
-  if (minutos < 0) minutos += 24 * 60; // si cruza medianoche
+
+  // Convierte a formato 24h aunque tenga AM o PM
+  function convertirAHoras(horaStr) {
+    if (!horaStr) return null;
+    let h = 0, m = 0;
+    let match = horaStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM|A\.M\.|P\.M\.|am|pm)?/i);
+    if (!match) return null;
+    h = parseInt(match[1]);
+    m = parseInt(match[2]);
+    const ampm = (match[3] || "").toUpperCase();
+
+    if (ampm.startsWith("P") && h < 12) h += 12;
+    if (ampm.startsWith("A") && h === 12) h = 0;
+    return h * 60 + m; // total minutos desde medianoche
+  }
+
+  const t1 = convertirAHoras(String(horaEntrega).trim());
+  const t2 = convertirAHoras(String(horaDevolucion).trim());
+  if (t1 === null || t2 === null) return 0;
+
+  let minutos = t2 - t1;
+  if (minutos < 0) minutos += 24 * 60; // cruza medianoche
   return Number((minutos / 60).toFixed(2));
 }
 
