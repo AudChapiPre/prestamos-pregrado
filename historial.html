@@ -87,27 +87,23 @@ async function cargarHistorial() {
       : "N/A";
 
 // 🕒 Calcular horas netas (soporta múltiples salones, y también listas tipo "07:00, 09:00")
+// 🕒 Sumar horas netas de todos los salones
 let horasNetas = 0;
 
-console.log("DEBUG HORAS:", p.horaEntrega, "|", p.horaDevolucion, "| salones:", p.salones);
-
-
 if (Array.isArray(p.salones) && p.salones.length > 0) {
-  // Caso 1: estructura moderna (array de salones)
   p.salones.forEach(salon => {
-    const h = calcularHorasNetas(salon.horaEntrega, salon.horaDevolucion);
-    if (!isNaN(h) && h > 0) horasNetas += h;
+    // si las horas vienen separadas por comas, procesarlas una a una
+    const entregas = String(salon.horaEntrega || "").split(",").map(h => h.trim());
+    const devoluciones = String(salon.horaDevolucion || "").split(",").map(h => h.trim());
+
+    for (let i = 0; i < Math.min(entregas.length, devoluciones.length); i++) {
+      const h = calcularHorasNetas(entregas[i], devoluciones[i]);
+      if (!isNaN(h) && h > 0) horasNetas += h;
+    }
   });
-} else {
-  // Caso 2: texto con varias horas separadas por coma o punto y coma
-  const entregas = String(p.horaEntrega || "")
-    .split(/[,;]+/)
-    .map(h => h.trim())
-    .filter(h => h);
-  const devoluciones = String(p.horaDevolucion || "")
-    .split(/[,;]+/)
-    .map(h => h.trim())
-    .filter(h => h);
+} else if (p.horaEntrega && p.horaDevolucion) {
+  const entregas = String(p.horaEntrega).split(",").map(h => h.trim());
+  const devoluciones = String(p.horaDevolucion).split(",").map(h => h.trim());
 
   for (let i = 0; i < Math.min(entregas.length, devoluciones.length); i++) {
     const h = calcularHorasNetas(entregas[i], devoluciones[i]);
@@ -115,8 +111,8 @@ if (Array.isArray(p.salones) && p.salones.length > 0) {
   }
 }
 
-// Guardar el total
 p.horasNetas = horasNetas;
+
 
 const row = `
   <tr>
